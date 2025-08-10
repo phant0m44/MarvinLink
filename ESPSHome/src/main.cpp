@@ -7,7 +7,7 @@
 #define I2S_WS  15
 #define I2S_SD  32
 #define I2S_SCK 14
-
+// here
 const char* ssid = "TOTOLINK_A702R";
 const char* password = "04042009";
 const char* serverUrl = "http://192.168.0.8:5000/upload";
