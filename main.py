@@ -1,37 +1,27 @@
 from flask import Flask, request
-import wave
-import time
-import io
+import datetime
 import os
 
 app = Flask(__name__)
-SAVE_DIR = "recordings"
-os.makedirs(SAVE_DIR, exist_ok=True)
 
-SAMPLE_RATE = 16000
-CHANNELS = 1
-SAMPLE_WIDTH = 2  # 16-bit
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-@app.route('/upload', methods=['POST'])
+@app.route("/upload", methods=["POST"])
 def upload_audio():
-    raw_data = request.data
+    audio_data = request.data
 
-    if not raw_data:
+    if not audio_data:
         return "No data received", 400
 
-    filename = f"{int(time.time())}.wav"
-    filepath = os.path.join(SAVE_DIR, filename)
+    filename = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") + ".wav"
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
 
-    # Запис у WAV
-    with wave.open(filepath, 'wb') as wf:
-        wf.setnchannels(CHANNELS)
-        wf.setsampwidth(SAMPLE_WIDTH)
-        wf.setframerate(SAMPLE_RATE)
-        wf.writeframes(raw_data)
+    with open(filepath, "wb") as f:
+        f.write(audio_data)
 
-    
-    print(f"[+] Saved recording: {filepath} ({len(raw_data)} bytes)")
+    print(f"[+] Збережено: {filepath} ({len(audio_data)} байт)")
     return "OK", 200
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)

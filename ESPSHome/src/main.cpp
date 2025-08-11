@@ -29,7 +29,7 @@ void i2s_install() {
     .sample_rate = SAMPLE_RATE,
     .bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT,
     .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
-    .communication_format = I2S_COMM_FORMAT_I2S,
+    .communication_format = I2S_COMM_FORMAT_STAND_I2S,
     .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
     .dma_buf_count = 4,
     .dma_buf_len = BUFFER_SIZE
@@ -48,10 +48,10 @@ void writeWavHeader(File file, uint32_t sampleRate, uint32_t numSamples) {
   uint32_t dataSize = numSamples * sizeof(int16_t);
   uint32_t chunkSize = 36 + dataSize;
 
-  file.write("RIFF", 4);
+  file.write((const uint8_t*)"RIFF", 4);
   file.write((uint8_t*)&chunkSize, 4);
-  file.write("WAVE", 4);
-  file.write("fmt ", 4);
+  file.write((const uint8_t*)"WAVE", 4);
+  file.write((const uint8_t*)"fmt ", 4);
 
   uint32_t subchunk1Size = 16;
   uint16_t audioFormat = 1;
@@ -68,7 +68,7 @@ void writeWavHeader(File file, uint32_t sampleRate, uint32_t numSamples) {
   file.write((uint8_t*)&blockAlign, 2);
   file.write((uint8_t*)&bitsPerSample, 2);
 
-  file.write("data", 4);
+  file.write((const uint8_t*)"data", 4);
   file.write((uint8_t*)&dataSize, 4);
 }
 
