@@ -1,29 +1,35 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
-#include <LittleFS.h>
+#include <SD.h>
+#include <SPI.h>
 #include "driver/i2s.h"
 
 #define I2S_WS  15
 #define I2S_SD  32
 #define I2S_SCK 14
-// here
+
+#define SD_CS   5
+
 const char* ssid = "TOTOLINK_A702R";
 const char* password = "04042009";
-const char* serverUrl = "http://192.168.0.8:5000/upload";
+const char* serverUrl = "http://192.168.0.7:5000/upload";
 
 #define SAMPLE_RATE 16000
-#define RECORD_TIME_SEC 3
+#define RECORD_SECONDS 15
 #define BUFFER_SIZE 512
-#define FILE_PATH "/recording.raw"
 
+int32_t i2sBuffer[BUFFER_SIZE];
+int16_t pcmBuffer[BUFFER_SIZE];
+
+// i2s installation  
 void i2s_install() {
   i2s_config_t i2s_config = {
     .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
     .sample_rate = SAMPLE_RATE,
-    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+    .bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT,
     .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
-    .communication_format = (i2s_comm_format_t)I2S_COMM_FORMAT_I2S,
+    .communication_format = I2S_COMM_FORMAT_I2S,
     .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
     .dma_buf_count = 4,
     .dma_buf_len = BUFFER_SIZE
@@ -38,6 +44,35 @@ void i2s_install() {
   i2s_set_pin(I2S_NUM_0, &pin_config);
 }
 
+void writeWavHeader(File file, uint32_t sampleRate, uint32_t numSamples) {
+  uint32_t dataSize = numSamples * sizeof(int16_t);
+  uint32_t chunkSize = 36 + dataSize;
+
+  file.write("RIFF", 4);
+  file.write((uint8_t*)&chunkSize, 4);
+  file.write("WAVE", 4);
+  file.write("fmt ", 4);
+
+  uint32_t subchunk1Size = 16;
+  uint16_t audioFormat = 1;
+  uint16_t numChannels = 1;
+  uint16_t bitsPerSample = 16;
+  uint32_t byteRate = sampleRate * numChannels * bitsPerSample / 8;
+  uint16_t blockAlign = numChannels * bitsPerSample / 8;
+
+  file.write((uint8_t*)&subchunk1Size, 4);
+  file.write((uint8_t*)&audioFormat, 2);
+  file.write((uint8_t*)&numChannels, 2);
+  file.write((uint8_t*)&sampleRate, 4);
+  file.write((uint8_t*)&byteRate, 4);
+  file.write((uint8_t*)&blockAlign, 2);
+  file.write((uint8_t*)&bitsPerSample, 2);
+
+  file.write("data", 4);
+  file.write((uint8_t*)&dataSize, 4);
+}
+
+// main setup code
 void setup() {
   Serial.begin(115200);
 
@@ -48,84 +83,61 @@ void setup() {
   }
   Serial.println("\nWiFi connected");
 
-  if (!LittleFS.begin()) {
-    Serial.println("LittleFS mount failed, formatting...");
-    if (LittleFS.format()) {
-      Serial.println("LittleFS formatted successfully");
-    } else {
-      Serial.println("LittleFS format failed");
-      while(1) delay(1000);
-    }
-
-    if (!LittleFS.begin()) {
-      Serial.println("LittleFS mount failed again!");
-      while(1) delay(1000);
-    }
-  } else {
-    Serial.println("LittleFS mounted");
+  if (!SD.begin(SD_CS)) {
+    Serial.println("SD Card init failed!");
+    while (1);
   }
+  Serial.println("SD Card ready");
 
   i2s_install();
 }
 
-
+// Main loop code
 void loop() {
   Serial.println("Recording...");
-
-  File audioFile = LittleFS.open(FILE_PATH, "w");
-  if (!audioFile) {
-    Serial.println("Failed to open file for writing");
-    delay(5000);
+  File file = SD.open("/record.wav", FILE_WRITE);
+  if (!file) {
+    Serial.println("Failed to open file");
     return;
   }
 
-  size_t bytesToRead = SAMPLE_RATE * RECORD_TIME_SEC * 2;
-  uint8_t buffer[BUFFER_SIZE];
-  size_t bytesReadTotal = 0;
+  uint32_t totalSamples = SAMPLE_RATE * RECORD_SECONDS;
+  writeWavHeader(file, SAMPLE_RATE, totalSamples);
 
-  while (bytesReadTotal < bytesToRead) {
+  Serial.println("Recording started...");
+  uint32_t samplesWritten = 0;
+  while (samplesWritten < totalSamples) {
     size_t bytesRead;
-    i2s_read(I2S_NUM_0, buffer, BUFFER_SIZE, &bytesRead, portMAX_DELAY);
-    audioFile.write(buffer, bytesRead);
-    bytesReadTotal += bytesRead;
+    i2s_read(I2S_NUM_0, (char*)i2sBuffer, BUFFER_SIZE * sizeof(int32_t), &bytesRead, portMAX_DELAY);
+    int samplesRead = bytesRead / sizeof(int32_t);
+
+    for (int i = 0; i < samplesRead; i++) {
+      pcmBuffer[i] = i2sBuffer[i] >> 14;
+    }
+    file.write((uint8_t*)pcmBuffer, samplesRead * sizeof(int16_t));
+    samplesWritten += samplesRead;
   }
-  audioFile.close();
-  Serial.println("Recording saved");
+  file.close();
+  Serial.println("Recording saved to SD");
 
-  // Відправляємо файл на сервер
-  Serial.println("Uploading file to server...");
+  // send to flask server on python
+  File sendFile = SD.open("/record.wav");
+  if (sendFile) {
+    HTTPClient http;
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "audio/wav");
 
-  HTTPClient http;
-  http.begin(serverUrl);
-  http.addHeader("Content-Type", "application/octet-stream");
+    WiFiClient *stream = http.getStreamPtr();
+    while (sendFile.available()) {
+      uint8_t buf[256];
+      int len = sendFile.read(buf, sizeof(buf));
+      stream->write(buf, len);
+    }
 
-  File uploadFile = LittleFS.open(FILE_PATH, "r");
-  if (!uploadFile) {
-    Serial.println("Failed to open file for upload");
-    delay(5000);
-    return;
+    http.end();
+    sendFile.close();
+    Serial.println("File sent to server");
   }
 
-  int fileSize = uploadFile.size();
-  uint8_t* fileBuffer = (uint8_t*)malloc(fileSize);
-  if (!fileBuffer) {
-    Serial.println("Failed to allocate buffer for upload");
-    uploadFile.close();
-    delay(5000);
-    return;
-  }
-
-  uploadFile.read(fileBuffer, fileSize);
-  uploadFile.close();
-
-  int httpResponseCode = http.POST(fileBuffer, fileSize);
-  free(fileBuffer);
-  http.end();
-
-  Serial.printf("Upload response code: %d\n", httpResponseCode);
-
-  // Видаляємо файл, щоб не захаращувати пам'ять
-  LittleFS.remove(FILE_PATH);
-
-  delay(10000);
+  delay(20000);
 }
