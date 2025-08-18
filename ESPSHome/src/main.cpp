@@ -31,8 +31,8 @@ static void i2s_install() {
     .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
     .sample_rate = SAMPLE_RATE,
     .bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT,
-    .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
-    .communication_format = I2S_COMM_FORMAT_STAND_I2S,
+    .channel_format = I2S_CHANNEL_FMT_ONLY_RIGHT, 
+    .communication_format = I2S_COMM_FORMAT_I2S,
     .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
     .dma_buf_count = 6,
     .dma_buf_len = BUF_SAMPLES,
@@ -48,8 +48,8 @@ static void i2s_install() {
   };
   ESP_ERROR_CHECK(i2s_driver_install(I2S_NUM_0, &cfg, 0, NULL));
   ESP_ERROR_CHECK(i2s_set_pin(I2S_NUM_0, &pins));
-  // Фіксуємо параметри ще раз (деякі прошивки це люблять)
   ESP_ERROR_CHECK(i2s_set_clk(I2S_NUM_0, SAMPLE_RATE, I2S_BITS_PER_SAMPLE_32BIT, I2S_CHANNEL_MONO));
+
 }
 
 // Пишемо заголовок WAV (PCM16 моно)
