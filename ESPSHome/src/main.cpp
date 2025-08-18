@@ -130,9 +130,21 @@ void loop() {
     }
     int samplesRead = bytesRead / sizeof(int32_t);
 
-    // 32->16 біт (INMP441 має 24 біти корисних; >>14 дає комфортний рівень)
+    // 32->16 біт (INMP441 має 24 біти корисних; >>16 дає комфортний рівень)
     for (int i = 0; i < samplesRead; i++) {
-      pcmBuffer[i] = (int16_t)(i2sBuffer[i] >> 14);
+      // pcmBuffer[i] = (int16_t)(i2sBuffer[i] >> 16);
+       int32_t sample24 = (i2sBuffer[i] >> 8) & 0xFFFFFF;  
+
+      if (sample24 & 0x800000) {
+          sample24 |= 0xFF000000;
+      }
+      int32_t sample = sample24 >> 8;   // стискаємо до 16 біт
+      // підсилення
+      sample *= 16;
+      if (sample > 32767) sample = 32767;
+      if (sample < -32768) sample = -32768;
+      pcmBuffer[i] = (int16_t)sample;
+
     }
 
     size_t wrote = file.write((uint8_t*)pcmBuffer, samplesRead * sizeof(int16_t));
