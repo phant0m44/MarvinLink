@@ -6,9 +6,9 @@
 
 #define MIC_PIN        34      // MAX9814 OUT -> GPIO34 (ADC)
 #define SD_CS          5       // SD CS
-#define SAMPLE_RATE    13000   // 16 kHz
+#define SAMPLE_RATE    12500   // 12.5 kHz
 #define BITS_PER_SAMPLE 16
-#define RECORD_SECONDS 10
+#define RECORD_SECONDS 25
 #define BUF_SAMPLES    256
 
 const char* ssid      = "TOTOLINK_A702R";
@@ -57,7 +57,7 @@ void setup() {
   // SD
   if (!SD.begin(SD_CS)) {
     Serial.println("SD Card init failed!");
-    while (true) { delay(1000); }
+    while (true) { delay(1100); }
   }
   Serial.println("SD Card ready");
 }
@@ -81,7 +81,7 @@ void loop() {
   uint32_t samplesWritten = 0;
   uint32_t dataBytes = 0;
 
-  unsigned long samplePeriod = 1000000UL / SAMPLE_RATE; // мікросекунди
+  unsigned long samplePeriod = 1000000UL / SAMPLE_RATE;
 
   unsigned long lastMicros = micros();
 
@@ -95,8 +95,8 @@ void loop() {
 
       lastMicros += samplePeriod;
       while (micros() < lastMicros) {
-        // чекаємо до потрібного часу
-        yield(); // дозволяємо ESP32 інші процеси
+
+        yield();
       }
     }
 
@@ -105,7 +105,6 @@ void loop() {
     dataBytes += wrote;
   }
 
-  // Записуємо коректний хедер
   file.seek(0);
   writeWavHeader(file, SAMPLE_RATE, dataBytes);
   file.close();
@@ -124,5 +123,5 @@ void loop() {
     }
   }
 
-  delay(10000); // чекати перед наступним записом
+  delay(150);
 }
