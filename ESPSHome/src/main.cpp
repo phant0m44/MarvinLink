@@ -21,7 +21,7 @@ Adafruit_ST7735 tft = Adafruit_ST7735(&spiTFT, TFT_CS, TFT_DC, TFT_RST);
 // ===== Аудіо =====
 #define MIC_PIN        34
 #define SD_CS          5
-#define SAMPLE_RATE    12500 // 12.5 kHz | поміняти в нижчу сторону якщо занадто швидке аудіо
+#define SAMPLE_RATE    12000 // 12 kHz | поміняти в нижчу сторону якщо занадто швидке аудіо
 #define BITS_PER_SAMPLE 16
 #define RECORD_SECONDS 25
 #define BUF_SAMPLES    256
@@ -29,7 +29,7 @@ Adafruit_ST7735 tft = Adafruit_ST7735(&spiTFT, TFT_CS, TFT_DC, TFT_RST);
 // ===== WiFi & Server =====
 const char* ssid      = "TOTOLINK_A702R";
 const char* password  = "04042009";
-const char* serverUrl = "http://192.168.0.8:5000/upload";
+const char* serverUrl = "http://192.168.0.6:5000/upload";
 
 // ===== Time (NTP) =====
 const char* ntpServer = "pool.ntp.org";
