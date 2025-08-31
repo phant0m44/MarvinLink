@@ -20,7 +20,7 @@ Adafruit_ST7735 tft = Adafruit_ST7735(&spiTFT, TFT_CS, TFT_DC, TFT_RST);
 // ===== Аудіо =====
 #define MIC_PIN        34
 #define SD_CS          5
-#define SAMPLE_RATE    12000 // 12000 або 8000
+#define SAMPLE_RATE    8000 // 12000 або 8000
 #define BITS_PER_SAMPLE 16
 #define RECORD_SECONDS 16 // 16 секунд 
 #define BUF_SAMPLES    256
@@ -301,6 +301,3 @@ void loop() {
 
   delay(350);
 }
-
-
-

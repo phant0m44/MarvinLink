@@ -8,7 +8,7 @@ app = Flask(__name__)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-model = WhisperModel("medium", device="cuda", compute_type="float16")
+model = WhisperModel("medium", device="cuda", compute_type="int8")
 
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -31,10 +31,10 @@ def upload():
 def process_files():
     print("[PROCESSING] Обробка файлів")
 
-    segments, info = model.transcribe("speech.wav", beam_size=5)
+    segments, info = model.transcribe("uploads/speech.wav", beam_size=5)
     text = " ".join([seg.text for seg in segments])
     print("STT:", text)
-    
+
     #gpt4_ask(f"Привіт, яка зараз температура на кухні?[temp_kitchen: 23; temp_bathroom: 19; temp_outside: 12; localtime: 20:02;] | (Answer simple and don`t use any emojis)")
 
 
