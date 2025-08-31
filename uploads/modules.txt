@@ -1,0 +1,1 @@
+temp_kitchen: 23.8; temp_outside: 23.8; localtime: 09:50;
