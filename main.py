@@ -3,6 +3,8 @@ import os
 #-------------------------------------
 from gptModelOnline import gpt4_ask
 from google.cloud import speech_v1p1beta1
+import gtts
+import g4f
 #from faster_whisper import WhisperModel
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speechtt-470817-a69292656905.json"
@@ -13,7 +15,6 @@ UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 #model = WhisperModel("medium", device="cuda", compute_type="int8")
-
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'speech' not in request.files or 'modules' not in request.files:
@@ -56,6 +57,10 @@ def process_files():
     ask = ask+ '['+txt+']'+'| (Answer simple and don`t use any emojis, answer only what i asked you and speak Ukrainian | btw you name now is Marvin)'
     #gpt4_ask(f"Привіт, яка зараз температура на кухні?[temp_kitchen: 23; temp_bathroom: 19; temp_outside: 12; localtime: 20:02;] | (Answer simple and don`t use any emojis)")
     print(gpt4_ask(ask))
+    tts = gtts.gTTS(text=ask, lang='uk')
+    tts.save("uploads/tts.mp3")
+    print("[PROCESSING] Відправка аудіо на Google TTS...")
 
 if __name__ == "__main__":
+    process_files()
     app.run(host="0.0.0.0", port=5000, debug=True)
