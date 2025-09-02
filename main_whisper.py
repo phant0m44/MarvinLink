@@ -3,6 +3,7 @@ import os
 #-------------------------------------
 from gptModelOnline import gpt4_ask
 from faster_whisper import WhisperModel
+import gtts
 
 app = Flask(__name__)
 UPLOAD_FOLDER = "uploads"
@@ -38,6 +39,9 @@ def process_files():
     #gpt4_ask(f"Привіт, яка зараз температура на кухні?[temp_kitchen: 23; temp_bathroom: 19; temp_outside: 12; localtime: 20:02;] | (Answer simple and don`t use any emojis)")
     answerr = gpt4_ask(f"{text} [temp_kitchen: 23; temp_bathroom: 19; temp_outside: 12; localtime: 20:02;] | (Answer simple and don`t use any emojis)")
     print("GPT:", answerr)
+    tts = gtts.gTTS(text=answerr, lang='uk')
+    tts.save("uploads/tts.mp3")
+    print("[PROCESSING] Відправка аудіо на Google STT...")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
