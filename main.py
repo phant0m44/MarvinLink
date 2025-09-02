@@ -6,7 +6,7 @@ from google.cloud import speech_v1p1beta1
 import g4f
 import subprocess
 import wave
-from piper import PiperVoice
+from piper import PiperVoice, SynthesisConfig
 #from faster_whisper import WhisperModel
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speechtt-470817-a69292656905.json"
@@ -68,7 +68,7 @@ def process_files():
     #Samplerate: 22,050Hz
 )
 
-voice.synthesize_wav(..., syn_config=syn_config)
+    voice.synthesize_wav(..., syn_config=syn_config)
     with wave.open("tts.wav", "wb") as wav_file:
         voice.synthesize_wav(gpt4_ask(answer), wav_file)
     
