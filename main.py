@@ -3,8 +3,10 @@ import os
 #-------------------------------------
 from gptModelOnline import gpt4_ask
 from google.cloud import speech_v1p1beta1
-import gtts
 import g4f
+import subprocess
+import wave
+from piper import PiperVoice
 #from faster_whisper import WhisperModel
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speechtt-470817-a69292656905.json"
@@ -13,7 +15,7 @@ app = Flask(__name__)
 client = speech_v1p1beta1.SpeechClient()
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
+voice = PiperVoice.load("/uk_UA-ukrainian_tts-medium.onnx",use_cuda=True)
 #model = WhisperModel("medium", device="cuda", compute_type="int8")
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -56,10 +58,20 @@ def process_files():
         ask += result.alternatives[0].transcript
     ask = ask+ '['+txt+']'+'| (Answer simple and don`t use any emojis, answer only what i asked you and speak Ukrainian | btw you name now is Marvin)'
     #gpt4_ask(f"Привіт, яка зараз температура на кухні?[temp_kitchen: 23; temp_bathroom: 19; temp_outside: 12; localtime: 20:02;] | (Answer simple and don`t use any emojis)")
-    print(gpt4_ask(ask))
-    tts = gtts.gTTS(text=ask, lang='uk')
-    tts.save("uploads/tts.mp3")
-    print("[PROCESSING] Відправка аудіо на Google TTS...")
+    answer = gpt4_ask(ask)
+    print(answer)
+    syn_config = SynthesisConfig(
+    length_scale=2.5,  # twice as slow
+    noise_scale=1.0,  # more audio variation
+    noise_w_scale=1.0,  # more speaking variation
+    normalize_audio=False, # use raw audio from voice
+    #Samplerate: 22,050Hz
+)
+
+voice.synthesize_wav(..., syn_config=syn_config)
+    with wave.open("tts.wav", "wb") as wav_file:
+        voice.synthesize_wav(gpt4_ask(answer), wav_file)
+    
 
 if __name__ == "__main__":
     process_files()
