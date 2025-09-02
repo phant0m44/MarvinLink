@@ -15,7 +15,7 @@ app = Flask(__name__)
 client = speech_v1p1beta1.SpeechClient()
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-voice = PiperVoice.load("/uk_UA-ukrainian_tts-medium.onnx",use_cuda=True)
+voice = PiperVoice.load("uk_UA-ukrainian_tts-medium.onnx",use_cuda=True)
 #model = WhisperModel("medium", device="cuda", compute_type="int8")
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -68,9 +68,9 @@ def process_files():
     #Samplerate: 22,050Hz
 )
 
-    voice.synthesize_wav(..., syn_config=syn_config)
+    
     with wave.open("tts.wav", "wb") as wav_file:
-        voice.synthesize_wav(gpt4_ask(answer), wav_file)
+        voice.synthesize_wav(answer, wav_file, syn_config=syn_config)
     
 
 if __name__ == "__main__":
