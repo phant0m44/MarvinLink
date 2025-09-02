@@ -5,6 +5,8 @@ from gptModelOnline import gpt4_ask
 from google.cloud import speech_v1p1beta1
 #from faster_whisper import WhisperModel
 
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speechtt-470817-a69292656905.json"
+
 app = Flask(__name__)
 client = speech_v1p1beta1.SpeechClient()
 UPLOAD_FOLDER = "uploads"
@@ -43,7 +45,7 @@ def process_files():
     audio = speech_v1p1beta1.RecognitionAudio(content=content)
     config = speech_v1p1beta1.RecognitionConfig(
         encoding=speech_v1p1beta1.RecognitionConfig.AudioEncoding.LINEAR16,
-        sample_rate_hertz=16000,
+        sample_rate_hertz=8000,
         language_code="uk-UA", 
     )
     print("[PROCESSING] Відправка аудіо на Google STT...")
@@ -51,9 +53,9 @@ def process_files():
     ask = ''
     for result in response.results:
         ask += result.alternatives[0].transcript
-    ask = ask+ '['+txt+']'+'| (Answer simple and don`t use any emojis)'
+    ask = ask+ '['+txt+']'+'| (Answer simple and don`t use any emojis, answer only what i asked you and speak Ukrainian | btw you name now is Marvin)'
     #gpt4_ask(f"Привіт, яка зараз температура на кухні?[temp_kitchen: 23; temp_bathroom: 19; temp_outside: 12; localtime: 20:02;] | (Answer simple and don`t use any emojis)")
-    gpt4_ask(ask)
+    print(gpt4_ask(ask))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

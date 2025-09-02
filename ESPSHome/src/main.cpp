@@ -22,7 +22,7 @@ Adafruit_ST7735 tft = Adafruit_ST7735(&spiTFT, TFT_CS, TFT_DC, TFT_RST);
 #define SD_CS          5
 #define SAMPLE_RATE    8000 // 12000 або 8000
 #define BITS_PER_SAMPLE 16
-#define RECORD_SECONDS 16 // 16 секунд 
+#define RECORD_SECONDS 12 // 12 секунд 
 #define BUF_SAMPLES    256
 int16_t buffer[BUF_SAMPLES];
 
