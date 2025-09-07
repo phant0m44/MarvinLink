@@ -6,8 +6,15 @@ from google.cloud import speech_v1p1beta1
 import g4f
 import subprocess
 import wave
-from piper import PiperVoice, SynthesisConfig
+import edge_tts
+import asyncio
 #from faster_whisper import WhisperModel
+
+def speak(text):
+    communicate = edge_tts.Communicate(text, voice="uk-UA-OstapNeural")
+    asyncio.run(communicate.save("uploads/output.mp3"))
+    print("TTS saved to uploads/output.mp3")
+    return 1
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speechtt-470817-a69292656905.json"
 
@@ -15,7 +22,6 @@ app = Flask(__name__)
 client = speech_v1p1beta1.SpeechClient()
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-voice = PiperVoice.load("uk_UA-ukrainian_tts-medium.onnx",use_cuda=True)
 #model = WhisperModel("medium", device="cuda", compute_type="int8")
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -56,21 +62,15 @@ def process_files():
     ask = ''
     for result in response.results:
         ask += result.alternatives[0].transcript
-    ask = ask+ '['+txt+']'+'| (Answer simple and don`t use any emojis, answer only what i asked you and speak Ukrainian | btw you name now is Marvin)'
+    ask = ask+ '['+txt+']'+'| (Answer simple and don`t use any emojis, answer only what i asked you and speak Ukrainian. Instead of, for example, 25.3°C, write twenty-five and three degrees, and do the same with other numbers and symbols. Write the time as twenty-two hours and thirty-five minutes. | btw you name now is Marvin)'
     #gpt4_ask(f"Привіт, яка зараз температура на кухні?[temp_kitchen: 23; temp_bathroom: 19; temp_outside: 12; localtime: 20:02;] | (Answer simple and don`t use any emojis)")
     answer = gpt4_ask(ask)
     print(answer)
-    syn_config = SynthesisConfig(
-    length_scale=2.5,  # twice as slow
-    noise_scale=1.0,  # more audio variation
-    noise_w_scale=1.0,  # more speaking variation
-    normalize_audio=False, # use raw audio from voice
-    #Samplerate: 22,050Hz
-)
+    if speak(answer):
+        print("tts saved successfully")
 
-    
-    with wave.open("tts.wav", "wb") as wav_file:
-        voice.synthesize_wav(answer, wav_file, syn_config=syn_config)
+
+
     
 
 if __name__ == "__main__":
