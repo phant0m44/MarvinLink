@@ -77,11 +77,26 @@ def process_files():
     print("[PROCESSING] Відправка аудіо на Google STT...")
 
     response = client.recognize(config=config, audio=audio)
-    ask = ''
+    text = ''
     for result in response.results:
-        ask += result.alternatives[0].transcript
+        text += result.alternatives[0].transcript
 
-    print("User says:", ask)
+    print("User says:", text)
+    marvin_variants = [
+    "марвін", "мавін", "марін", "марв", "марвiн",  # Основні варіанти
+    "малвін", "маврін", "марвін", "марлен", "мартін"  # Інші можливі помилки
+]
+    keyword_found = None
+    processed_text = text.lower()
+    for variant in marvin_variants:
+        if variant in processed_text:
+            keyword_found = variant
+            break
+
+    if keyword_found:
+        start_index = processed_text.find(keyword_found)
+        end_index = start_index + len(keyword_found)
+        ask = text[end_index:].strip()
 
     ask = ask+ '['+txt+']'+'| (Answer simple and don`t use any emojis, answer only what i asked you and speak always only Ukrainian. Instead of, for example, 25.3°C, write twenty-five and three degrees, and do the same with other numbers and symbols. Write the time as twenty-two hours and thirty-five minutes. | btw you name now is Marvin and dont answer for this.)'
     #gpt4_ask(f"Привіт, яка зараз температура на кухні?[temp_kitchen: 23; temp_bathroom: 19; temp_outside: 12; localtime: 20:02;] | (Answer simple and don`t use any emojis)")
