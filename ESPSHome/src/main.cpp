@@ -29,7 +29,7 @@ int16_t buffer[BUF_SAMPLES];
 // ===== WiFi & Server =====
 const char* ssid      = "TOTOLINK_A702R";
 const char* password  = "04042009";
-const char* serverUrl = "http://192.168.0.6:5000/upload";
+const char* serverUrl = "http://192.168.0.4:5000/upload";
 
 // ===== Time (NTP) =====
 const char* ntpServer = "pool.ntp.org";
@@ -103,7 +103,7 @@ void uploadFiles() {
   }
 
   WiFiClient client;
-  if (!client.connect("192.168.0.6", 5000)) {
+  if (!client.connect("192.168.0.4", 5000)) {
     Serial.println("Connection failed");
     return;
   }
@@ -124,7 +124,7 @@ void uploadFiles() {
                       bodyEnd.length();
 
   client.printf("POST /upload HTTP/1.1\r\n");
-  client.printf("Host: 192.168.0.6\r\n");
+  client.printf("Host: 192.168.0.4\r\n");
   client.printf("Content-Type: multipart/form-data; boundary=%s\r\n", boundary.c_str());
   client.printf("Content-Length: %d\r\n", contentLength);
   client.print("Connection: close\r\n\r\n");

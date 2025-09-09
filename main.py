@@ -11,7 +11,6 @@ import asyncio
 from pydub import AudioSegment
 import time
 import soundfile as sf
-import pyrubberband as pyrb
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speechtt-470817-a69292656905.json"
 
@@ -42,10 +41,6 @@ def upload():
 
     speech.save(os.path.join(UPLOAD_FOLDER, "speech.wav"))
     modules.save(os.path.join(UPLOAD_FOLDER, "modules.txt"))
-
-    audio_data, sample_rate = sf.read("uploads/speech.wav")
-    y_stretched = pyrb.time_stretch(audio_data, sample_rate, 1.2) # 1.2x speed
-    sf.write("uploads/speech.wav", y_stretched, sample_rate)
 
     print("[SAVED] speech.wav + modules.txt")
     process_files()
