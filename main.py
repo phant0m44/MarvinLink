@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, send_file
 import os
 #-------------------------------------
 from gptModelOnline import gpt4_ask
@@ -8,21 +8,30 @@ import subprocess
 import wave
 import edge_tts
 import asyncio
-#from faster_whisper import WhisperModel
+from pydub import AudioSegment
+import time
+import soundfile as sf
+import pyrubberband as pyrb
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speechtt-470817-a69292656905.json"
 
 def speak(text):
     communicate = edge_tts.Communicate(text, voice="uk-UA-OstapNeural")
     asyncio.run(communicate.save("uploads/output.mp3"))
-    print("TTS saved to uploads/output.mp3")
-    return 1
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "speechtt-470817-a69292656905.json"
+    audio = AudioSegment.from_file("uploads/output.mp3", format="mp3")
+    audio = audio.set_frame_rate(16000)  # 16kHz
+    audio = audio.set_channels(1)        # моно для ESP32
+    audio = audio.set_sample_width(2)    # 16-bit PCM
+    audio.export("uploads/output.wav", format="wav")
+    print("TTS converted to 16kHz mono WAV")
+    return 1
 
 app = Flask(__name__)
 client = speech_v1p1beta1.SpeechClient()
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-#model = WhisperModel("medium", device="cuda", compute_type="int8")
+
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'speech' not in request.files or 'modules' not in request.files:
@@ -34,45 +43,58 @@ def upload():
     speech.save(os.path.join(UPLOAD_FOLDER, "speech.wav"))
     modules.save(os.path.join(UPLOAD_FOLDER, "modules.txt"))
 
-    print("[SAVED] speech.wav + modules.txt")
+    audio_data, sample_rate = sf.read("uploads/speech.wav")
+    y_stretched = pyrb.time_stretch(audio_data, sample_rate, 1.2) # 1.2x speed
+    sf.write("uploads/speech.wav", y_stretched, sample_rate)
 
+    print("[SAVED] speech.wav + modules.txt")
     process_files()
 
     return "OK", 200
 
+@app.route('/tts', methods=['GET'])
+def send_tts():
+    time.sleep(0.25)  # wait for file to be written
+    file_path = os.path.join(UPLOAD_FOLDER, "output.wav")
+
+    if os.path.exists(file_path):
+        return send_file(file_path, mimetype="audio/wav")
+    
+    else:
+        return "No TTS yet", 404
 
 def process_files():
     print("[PROCESSING] Обробка файлів")
 
-    #segments, info = model.transcribe("uploads/speech.wav", beam_size=5)
-    #text = " ".join([seg.text for seg in segments])
-    #print("STT:", text)
     with open("uploads/modules.txt", "r", encoding="utf-8") as modules_file:
         txt = modules_file.readline().strip()
+
     with open("uploads/speech.wav", "rb") as audio_file:
         content = audio_file.read()
+
     audio = speech_v1p1beta1.RecognitionAudio(content=content)
     config = speech_v1p1beta1.RecognitionConfig(
         encoding=speech_v1p1beta1.RecognitionConfig.AudioEncoding.LINEAR16,
         sample_rate_hertz=8000,
         language_code="uk-UA", 
     )
+
     print("[PROCESSING] Відправка аудіо на Google STT...")
+
     response = client.recognize(config=config, audio=audio)
     ask = ''
     for result in response.results:
         ask += result.alternatives[0].transcript
-    ask = ask+ '['+txt+']'+'| (Answer simple and don`t use any emojis, answer only what i asked you and speak Ukrainian. Instead of, for example, 25.3°C, write twenty-five and three degrees, and do the same with other numbers and symbols. Write the time as twenty-two hours and thirty-five minutes. | btw you name now is Marvin)'
+
+    print("User says:", ask)
+
+    ask = ask+ '['+txt+']'+'| (Answer simple and don`t use any emojis, answer only what i asked you and speak always only Ukrainian. Instead of, for example, 25.3°C, write twenty-five and three degrees, and do the same with other numbers and symbols. Write the time as twenty-two hours and thirty-five minutes. | btw you name now is Marvin and dont answer for this.)'
     #gpt4_ask(f"Привіт, яка зараз температура на кухні?[temp_kitchen: 23; temp_bathroom: 19; temp_outside: 12; localtime: 20:02;] | (Answer simple and don`t use any emojis)")
     answer = gpt4_ask(ask)
     print(answer)
+
     if speak(answer):
         print("tts saved successfully")
 
-
-
-    
-
 if __name__ == "__main__":
-    process_files()
     app.run(host="0.0.0.0", port=5000, debug=True)
