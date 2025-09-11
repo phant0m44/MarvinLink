@@ -7,29 +7,31 @@
 #include <Adafruit_ST7735.h>
 #include <DHT.h>
 #include "time.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 // ===== TFT =====
-#define TFT_CS   15
-#define TFT_DC   2
-#define TFT_RST  4
+#define TFT_CS 15
+#define TFT_DC 2
+#define TFT_RST 4
 #define TFT_SCLK 14
 #define TFT_MOSI 13
 SPIClass spiTFT(VSPI);
 Adafruit_ST7735 tft = Adafruit_ST7735(&spiTFT, TFT_CS, TFT_DC, TFT_RST);
 
 // ===== Аудіо =====
-#define MIC_PIN        34
-#define SD_CS          5
-#define SAMPLE_RATE    8000 // 12000 або 8000
+#define MIC_PIN 34
+#define SD_CS 5
+#define SAMPLE_RATE 8000
 #define BITS_PER_SAMPLE 16
-#define RECORD_SECONDS 12 // 12 секунд 
-#define BUF_SAMPLES    256
+#define RECORD_SECONDS 12
+#define BUF_SAMPLES 256
 int16_t buffer[BUF_SAMPLES];
 
 // ===== WiFi & Server =====
-const char* ssid      = "TOTOLINK_A702R";
-const char* password  = "04042009";
-const char* serverUrl = "http://192.168.0.4:5000/upload";
+const char* ssid = "TP-Link_0CCE";
+const char* password = "48449885";
+const char* serverUrl = "http://192.168.0.107:5000/upload";
 
 // ===== Time (NTP) =====
 const char* ntpServer = "pool.ntp.org";
@@ -43,7 +45,11 @@ const int daylightOffset_sec = 0;
 DHT dht1(DHTPIN1, DHTTYPE);
 DHT dht2(DHTPIN2, DHTTYPE);
 
-// ===== WAV HEADER =====
+// ===== Глобальні змінні стану =====
+volatile bool recordingComplete = false;
+volatile bool hasUploaded = false;
+
+// ===== Заголовок WAV =====
 void writeWavHeader(File &file, uint32_t sampleRate, uint32_t dataBytes) {
   uint32_t chunkSize = 36 + dataBytes;
   uint16_t audioFormat = 1;
@@ -56,7 +62,6 @@ void writeWavHeader(File &file, uint32_t sampleRate, uint32_t dataBytes) {
   file.write((uint8_t*)&chunkSize, 4);
   file.write((const uint8_t*)"WAVE", 4);
   file.write((const uint8_t*)"fmt ", 4);
-
   uint32_t subchunk1Size = 16;
   file.write((uint8_t*)&subchunk1Size, 4);
   file.write((uint8_t*)&audioFormat, 2);
@@ -65,12 +70,11 @@ void writeWavHeader(File &file, uint32_t sampleRate, uint32_t dataBytes) {
   file.write((uint8_t*)&byteRate, 4);
   file.write((uint8_t*)&blockAlign, 2);
   file.write((uint8_t*)&bitsPerSample, 2);
-
   file.write((const uint8_t*)"data", 4);
   file.write((uint8_t*)&dataBytes, 4);
 }
 
-// ===== Time helper =====
+// ===== Допоміжна функція часу =====
 String getLocalTimeString() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) return "No Time";
@@ -79,7 +83,7 @@ String getLocalTimeString() {
   return String(buf);
 }
 
-// ===== ProgressBar =====
+// ===== Прогрес-бар =====
 void drawProgress(int seconds, int total) {
   int barWidth = map(seconds, 0, total, 0, 160);
   tft.fillRect(5, 55, 155, 35, ST77XX_WHITE);
@@ -93,7 +97,7 @@ void drawProgress(int seconds, int total) {
   tft.print(total);
 }
 
-// ===== Upload function =====
+// ===== Функція завантаження файлів =====
 void uploadFiles() {
   File wavF = SD.open("/speech.wav", FILE_READ);
   File txtF = SD.open("/modules.txt", FILE_READ);
@@ -103,19 +107,19 @@ void uploadFiles() {
   }
 
   WiFiClient client;
-  if (!client.connect("192.168.0.4", 5000)) {
+  if (!client.connect("192.168.0.107", 5000)) {
     Serial.println("Connection failed");
     return;
   }
-
+  
   String boundary = "----ESP32Boundary12345";
   String bodyStart = "--"+boundary+"\r\n"
-      "Content-Disposition: form-data; name=\"speech\"; filename=\"speech.wav\"\r\n"
-      "Content-Type: audio/wav\r\n\r\n";
-
+"Content-Disposition: form-data; name=\"speech\"; filename=\"speech.wav\"\r\n"
+"Content-Type: audio/wav\r\n\r\n";
+  
   String bodyMiddle = "\r\n--"+boundary+"\r\n"
-      "Content-Disposition: form-data; name=\"modules\"; filename=\"modules.txt\"\r\n"
-      "Content-Type: text/plain\r\n\r\n";
+"Content-Disposition: form-data; name=\"modules\"; filename=\"modules.txt\"\r\n"
+"Content-Type: text/plain\r\n\r\n";
 
   String bodyEnd = "\r\n--"+boundary+"--\r\n";
 
@@ -124,7 +128,7 @@ void uploadFiles() {
                       bodyEnd.length();
 
   client.printf("POST /upload HTTP/1.1\r\n");
-  client.printf("Host: 192.168.0.4\r\n");
+  client.printf("Host: 192.168.0.107\r\n");
   client.printf("Content-Type: multipart/form-data; boundary=%s\r\n", boundary.c_str());
   client.printf("Content-Length: %d\r\n", contentLength);
   client.print("Connection: close\r\n\r\n");
@@ -155,6 +159,70 @@ void uploadFiles() {
   txtF.close();
   client.stop();
   Serial.println("Upload done");
+}
+
+// ===== ЗАВДАННЯ ДЛЯ ЗАПИСУ НА CORE 0 =====
+void recordingTask(void *pvParameters) {
+  const char* wavPath = "/speech.wav";
+  File file = SD.open(wavPath, FILE_WRITE);
+  
+  if(!file){
+    Serial.println("Failed WAV");
+    delay(1000);
+    vTaskDelete(NULL);
+  }
+
+  tft.fillScreen(ST77XX_WHITE);
+  tft.setCursor(5, 10);
+  tft.setTextColor(ST77XX_BLACK);
+  tft.setTextSize(1);
+  tft.println("Recording...");
+
+  uint8_t header[44] = {0};
+  file.write(header, sizeof(header));
+
+  uint32_t totalSamples = SAMPLE_RATE * RECORD_SECONDS;
+  uint32_t samplesWritten = 0;
+  uint32_t dataBytes = 0;
+  unsigned long samplePeriod = 1000000UL / SAMPLE_RATE;
+  unsigned long lastMicros = micros();
+  int lastSec = -1;
+  unsigned long startMillis = millis();
+
+  while(samplesWritten < totalSamples){
+    for(int i = 0; i < BUF_SAMPLES && samplesWritten < totalSamples; i++){
+      int raw = analogRead(MIC_PIN);
+      int16_t sample = (raw - 2048) << 4;
+      buffer[i] = sample;
+      samplesWritten++;
+      lastMicros += samplePeriod;
+      while(micros() < lastMicros) yield();
+    }
+    
+    size_t writeCount = ((samplesWritten % BUF_SAMPLES == 0) ? BUF_SAMPLES : samplesWritten % BUF_SAMPLES);
+    size_t wrote = file.write((uint8_t*)buffer, writeCount * sizeof(int16_t));
+    dataBytes += wrote;
+
+    int currentSec = (millis() - startMillis) / 1000;
+    if (currentSec != lastSec) {
+      lastSec = currentSec;
+      drawProgress(currentSec, RECORD_SECONDS);
+      
+      tft.setCursor(120, 10);
+      tft.setTextColor(ST77XX_BLACK, ST77XX_WHITE);
+      tft.setTextSize(1);
+      tft.println(getLocalTimeString());
+    }
+    delay(2);
+  }
+
+  file.seek(0);
+  writeWavHeader(file, SAMPLE_RATE, dataBytes);
+  file.close();
+  Serial.println("WAV saved");
+
+  recordingComplete = true;
+  vTaskDelete(NULL);
 }
 
 // ===== Setup =====
@@ -193,111 +261,53 @@ void setup() {
   // DHT
   dht1.begin();
   dht2.begin();
+
+  // Створюємо завдання для запису на Core 0
+  xTaskCreatePinnedToCore(
+    recordingTask,"RecordingTask",20000,NULL,1,NULL,0          
+  );
 }
 
 // ===== Loop =====
 void loop() {
-  // ===== RECORDING =====
-  tft.fillScreen(ST77XX_WHITE);
-  tft.setCursor(5, 10);
-  tft.setTextColor(ST77XX_BLACK);
-  tft.setTextSize(1);
-  tft.println("Recording...");
+  if (recordingComplete && !hasUploaded) {
+    
+    tft.setCursor(5, 20);
+    tft.setTextColor(ST77XX_RED);
+    tft.setTextSize(1);
+    tft.println("Saving...");
 
-  const char* wavPath = "/speech.wav";
-  File file = SD.open(wavPath, FILE_WRITE);
-  if(!file){
-    Serial.println("Failed WAV");
+    float temp1 = dht1.readTemperature();
+    float temp2 = dht2.readTemperature();
+
+    File txtFile = SD.open("/modules.txt", FILE_WRITE);
+    if(txtFile){
+      String line = "temp_kitchen: " + String(temp1,1) + 
+                     "; temp_outside: " + String(temp2,1) + 
+                     "; localtime: " + getLocalTimeString() + 
+                     "; Led1_pin: 12" + ";\n (To power on led type: {Led1_on}, and to power off led type: {Led1_off}. ALWAYS use curly braces!!!.)";
+      txtFile.print(line);
+      txtFile.close();
+      Serial.println(line);
+    }
+
+    tft.setCursor(5, 30);
+    tft.setTextColor(ST77XX_RED);
+    tft.setTextSize(1);
+    tft.println("Uploading...");
+    uploadFiles();
+    
+    tft.setCursor(5, 40);
+    tft.setTextColor(ST77XX_ORANGE);
+    tft.setTextSize(1);
+    tft.println("Done!");
+    
+    hasUploaded = true;
+  }
+
+  if (hasUploaded) {
+    delay(100);
+  } else {
     delay(1000);
-    return;
   }
-
-  // ===== temp header =====
-  uint8_t header[44] = {0};
-  file.write(header, sizeof(header));
-
-  uint32_t totalSamples = SAMPLE_RATE * RECORD_SECONDS;
-  uint32_t samplesWritten = 0;
-  uint32_t dataBytes = 0;
-  unsigned long samplePeriod = 1000000UL / SAMPLE_RATE;
-  unsigned long lastMicros = micros();
-
-  int lastSec = -1;
-  unsigned long startMillis = millis();
-
-  while(samplesWritten < totalSamples){
-    // ===== записуємо буфер =====
-    for(int i=0; i<BUF_SAMPLES && samplesWritten<totalSamples; i++){
-      int raw = analogRead(MIC_PIN);
-      int16_t sample = (raw-2048)<<4;
-      buffer[i] = sample;
-      samplesWritten++;
-      lastMicros += samplePeriod;
-      while(micros() < lastMicros) yield();
-    }
-
-    // ===== запис в SD =====
-    size_t writeCount = ((samplesWritten % BUF_SAMPLES == 0) ? BUF_SAMPLES : samplesWritten % BUF_SAMPLES);
-    size_t wrote = file.write((uint8_t*)buffer, writeCount * sizeof(int16_t));
-    dataBytes += wrote;
-
-    // ===== фактичний час =====
-    int currentSec = (millis() - startMillis) / 1000;
-    if(currentSec > RECORD_SECONDS) currentSec = RECORD_SECONDS;
-
-    if(currentSec != lastSec){
-      lastSec = currentSec;
-
-      // ===== прогрес-бар =====
-      drawProgress(currentSec, RECORD_SECONDS);
-
-      // ===== час =====
-      tft.setCursor(120, 10);
-      tft.setTextColor(ST77XX_BLACK, ST77XX_WHITE);
-      tft.setTextSize(1);
-      tft.println(getLocalTimeString());
-    }
-  }
-
-  // ===== WAV HEADER =====
-  file.seek(0);
-  writeWavHeader(file, SAMPLE_RATE, dataBytes);
-  file.close();
-  Serial.println("WAV saved");
-
-  // ===== SAVING TXT =====
-  tft.setCursor(5, 20);
-  tft.setTextColor(ST77XX_RED);
-  tft.setTextSize(1);
-  tft.println("Saving...");
-
-  float temp1 = dht1.readTemperature();
-  float temp2 = dht2.readTemperature();
-
-  File txtFile = SD.open("/modules.txt", FILE_WRITE);
-  if(txtFile){
-    String line = "temp_kitchen: " + String(temp1,1) + 
-                  "; temp_outside: " + String(temp2,1) + 
-                  "; localtime: " + getLocalTimeString() + 
-                  "; Led1_pin: 12" + ";\n (To power on led type: {Led1_on}, and to power off led type: {Led1_off}. ALWAYS use curly braces!!!.)";
-    txtFile.print(line);
-    txtFile.close();
-    Serial.println(line);
-  }
-
-  // ===== UPLOADING =====
-  tft.setCursor(5, 30);
-  tft.setTextColor(ST77XX_RED);
-  tft.setTextSize(1);
-  tft.println("Uploading...");
-
-  uploadFiles();
-
-  // ===== DONE =====
-  tft.setCursor(5, 40);
-  tft.setTextColor(ST77XX_ORANGE);
-  tft.setTextSize(1);
-  tft.println("Done!");
-
-  delay(350);
 }
