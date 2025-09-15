@@ -1,4 +1,4 @@
-# MarvinLink 🏠🤖
+# MarvinLink 🏠
 
 MarvinLink is an open-source smart home platform that allows you to control your home devices using voice commands and AI. This project is designed to be flexible and customizable so anyone can create their own smart home functionalities without being limited by commercial solutions.
 
@@ -21,18 +21,18 @@ This project uses **PlatformIO** for development and firmware management. The ma
 
 ```
 MarvinLink/
-├── ESPSHome/ # Firmware source code for ESP32
-├── pycache/ # Compiled Python files (auto-generated)
+├── ESPSHome/ # Source code for ESP32
+├── pycache/
 ├── nonstable/ # Experimental or unstable code
-├── old/ # Legacy code or deprecated files
-├── uploads/ # Uploaded files or assets
-├── ESPSHomeProject.code-workspace # VSCode workspace configuration
+├── old/ # Some old code
+├── uploads/ # Temporaly files from esp32
+├── ESPSHomeProject.code-workspace # Lite VSCode workspace configuration
 ├── gptModelOffline.py # Offline GPT model integration
 ├── gptModelOnline.py # Online GPT model integration
 ├── main.py # Main Python script
-├── main_whisper.py # Whisper AI integration
-├── providers.py # External service providers
-├── speechtt-470817-a69292656905.json # Speech synthesis model
+├── main_whisper.py # Whisper stt
+├── providers.py # Check for avaliable providers
+├── speechtt-470817-a69292656905.json # Speech synthesis model api
 └── testSampleRate.py # Sample rate testing script
 ```
 
