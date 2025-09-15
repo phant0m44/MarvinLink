@@ -89,11 +89,11 @@ pio run --target upload
 - Basic device control through Python backend  
 
 ### 🔧 Next Steps / In Progress
-1. Implement audio output for responses (text-to-speech)  
+1. Implement audio output for responses (text-to-speech)
 2. Create a web interface for control and monitoring  
-3. Port the system to Raspberry Pi for fully autonomous operation (no external server needed)  
-4. Integrate sensors properly and connect them via Bluetooth through the web interface  
-5. Fit all components into a custom housing
+3. Port the system to Raspberry Pi for fully autonomous operation and integrate wake word detection (no external server needed)
+5. Integrate sensors properly and connect them via Bluetooth through the web interface  
+6. Fit all components into a custom housing
 
 ### 🚀 Future Development
 - Bug fixes and stability improvements  
