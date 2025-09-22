@@ -15,7 +15,7 @@ porcupine = pvporcupine.create(
 # === micro settings ===
 pa = pyaudio.PyAudio()
 stream = pa.open(
-    rate=porcupine.sample_rate,
+    rate=16000,
     channels=1,
     format=pyaudio.paInt16,
     input=True,
