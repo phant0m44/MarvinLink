@@ -3,7 +3,7 @@ import pyaudio
 import struct
 
 
-with open("access_key.txt", "r") as f:
+with open("access_WakeWord.txt", "r") as f:
     access_key_r = f.read().strip()
 
 # === initialization Porcupine ===
@@ -31,8 +31,9 @@ try:
         result = porcupine.process(pcm)
         if result >= 0:
             print("Wake word виявлено!")
-except KeyboardInterrupt:
+except Exception as e:
     print("Завершення програми...")
+    print("Помилка:", e)
 
 finally:
     stream.stop_stream()
