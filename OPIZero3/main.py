@@ -9,7 +9,8 @@ with open("access_WakeWord.txt", "r") as f:
 # === Porcupine ===
 porcupine = pvporcupine.create(
     access_key=access_key_r,
-    keyword_paths=["okay-marvin_en_raspberry-pi_v3_0_0.ppn"]
+    keyword_paths=["okay-marvin_en_raspberry-pi_v3_0_0.ppn"],
+    sensitivities=[0.7]
 )
 
 pa = pyaudio.PyAudio()
