@@ -11,7 +11,7 @@ from pydub import AudioSegment
 import time
 import soundfile as sf
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "C:\\Users\\Vip\\Documents\\Python\\speechtotext-472316-80833edcf25b.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "C:\\Users\\Vip\\Documents\\Python\\speechtotext-472316-80833edcf25b.json" # Your stt credentials json path
 
 def speak(text):
     communicate = edge_tts.Communicate(text, voice="uk-UA-OstapNeural")
