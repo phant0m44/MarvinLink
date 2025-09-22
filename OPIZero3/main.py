@@ -9,7 +9,7 @@ with open("access_WakeWord.txt", "r") as f:
 # === initialization Porcupine ===
 porcupine = pvporcupine.create(
     access_key=access_key_r,
-    keywords=["okay-marvin_en_raspberry-pi_v3_0_0.ppn"]
+    keyword_paths=["okay-marvin_en_raspberry-pi_v3_0_0.ppn"]
 )
 
 # === micro settings ===
