@@ -7,6 +7,7 @@
 #include <Adafruit_ST7735.h>
 #include <DHT.h>
 #include "time.h"
+#include "driver/i2s.h"
 
 // ===== TFT =====
 #define TFT_CS   15
@@ -20,16 +21,16 @@ Adafruit_ST7735 tft = Adafruit_ST7735(&spiTFT, TFT_CS, TFT_DC, TFT_RST);
 // ===== Аудіо =====
 #define MIC_PIN        34
 #define SD_CS          5
-#define SAMPLE_RATE    8000 // 12000 або 8000
+#define SAMPLE_RATE    12000 // 12000 або 8000
 #define BITS_PER_SAMPLE 16
 #define RECORD_SECONDS 12 // 12 секунд 
 #define BUF_SAMPLES    256
 int16_t buffer[BUF_SAMPLES];
 
 // ===== WiFi & Server =====
-const char* ssid      = "Pixel6a";
-const char* password  = "123123123";
-const char* serverUrl = "http://10.228.138.79:5000/upload";
+const char* ssid      = "TOTOLINK_A702R";
+const char* password  = "04042009";
+const char* serverUrl = "http://192.168.0.9:5000/upload";
 
 // ===== Time (NTP) =====
 const char* ntpServer = "pool.ntp.org";
@@ -42,6 +43,23 @@ const int daylightOffset_sec = 0;
 #define DHTTYPE DHT11
 DHT dht1(DHTPIN1, DHTTYPE);
 DHT dht2(DHTPIN2, DHTTYPE);
+
+// ===== I2S =====
+#define I2S_DOUT 27 // DIN
+#define I2S_BCLK 26
+#define I2S_LRC 25
+
+const char* ttsUrl = "http://192.168.0.9:5000/tts";
+
+void debugNetwork() {
+  Serial.println("=== NETWORK DEBUG ===");
+  Serial.print("WiFi status: "); Serial.println(WiFi.status());
+  Serial.print("Local IP: "); Serial.println(WiFi.localIP());
+  Serial.print("Gateway IP: "); Serial.println(WiFi.gatewayIP());
+  Serial.print("RSSI: "); Serial.println(WiFi.RSSI());
+  Serial.println("=====================");
+}
+
 
 // ===== WAV HEADER =====
 void writeWavHeader(File &file, uint32_t sampleRate, uint32_t dataBytes) {
@@ -103,7 +121,7 @@ void uploadFiles() {
   }
 
   WiFiClient client;
-  if (!client.connect("10.228.138.79", 5000)) {
+  if (!client.connect("192.168.0.9", 5000)) {
     Serial.println("Connection failed");
     return;
   }
@@ -124,7 +142,7 @@ void uploadFiles() {
                       bodyEnd.length();
 
   client.printf("POST /upload HTTP/1.1\r\n");
-  client.printf("Host: 10.228.138.79\r\n");
+  client.printf("Host: 192.168.0.9\r\n");
   client.printf("Content-Type: multipart/form-data; boundary=%s\r\n", boundary.c_str());
   client.printf("Content-Length: %d\r\n", contentLength);
   client.print("Connection: close\r\n\r\n");
@@ -156,6 +174,100 @@ void uploadFiles() {
   client.stop();
   Serial.println("Upload done");
 }
+
+// ===== I2S setup and playback =====
+void i2s_install() {
+  i2s_config_t i2s_config = {
+    .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
+    .sample_rate = 8000,
+    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+    .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
+    .communication_format = I2S_COMM_FORMAT_I2S_MSB,
+    .intr_alloc_flags = 0,
+    .dma_buf_count = 8,
+    .dma_buf_len = 512,
+    .use_apll = false
+  };
+
+  const i2s_pin_config_t pin_config = {
+    .bck_io_num = I2S_BCLK,
+    .ws_io_num  = I2S_LRC,
+    .data_out_num = I2S_DOUT,
+    .data_in_num  = I2S_PIN_NO_CHANGE
+  };
+
+  i2s_driver_uninstall(I2S_NUM_0);
+  esp_err_t r = i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
+  if (r != ESP_OK) {
+    Serial.printf("i2s_driver_install fail: %d\n", r);
+    return;
+  }
+  i2s_set_pin(I2S_NUM_0, &pin_config);
+  i2s_set_clk(I2S_NUM_0, 8000, I2S_BITS_PER_SAMPLE_16BIT, I2S_CHANNEL_MONO);
+}
+
+
+void playTTS() {
+  // 1. Downloading output.wav from Flask to SD
+  HTTPClient http;
+  http.begin("http://192.168.0.9:5000/tts");
+  int httpCode = http.GET();
+
+  if (httpCode != HTTP_CODE_OK) {
+    Serial.printf("HTTP error: %d\n", httpCode);
+    http.end();
+    return;
+  }
+
+  File f = SD.open("/output.wav", FILE_WRITE);
+  if (!f) {
+    Serial.println("Cannot open SD for writing");
+    http.end();
+    return;
+  }
+
+  WiFiClient *stream = http.getStreamPtr();
+  uint8_t buff[512];
+  int len = http.getSize();
+  while (http.connected() && (len > 0 || len == -1)) {
+    size_t size = stream->available();
+    if (size) {
+      int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
+      f.write(buff, c);
+      if (len > 0) len -= c;
+    }
+    delay(1);
+  }
+  f.close();
+  http.end();
+  Serial.println("File saved to SD");
+
+  // 2. playing from sd
+  File inFile = SD.open("/output.wav", FILE_READ);
+  if (!inFile) {
+    Serial.println("Cannot open /output.wav for reading");
+    return;
+  }
+
+  // WAV-header (44 bytes)
+  inFile.seek(44);
+
+  uint8_t buf[512];
+  while (inFile.available()) {
+    int n = inFile.read(buf, sizeof(buf));
+    if (n % 2) n--; // 16-bit alignment
+    size_t written;
+    esp_err_t res = i2s_write(I2S_NUM_0, buf, n, &written, portMAX_DELAY);
+    if (res != ESP_OK) {
+      Serial.printf("I2S write error: %d\n", res);
+      break;
+    }
+  }
+  inFile.close();
+  Serial.println("Playback done");
+}
+
+
 
 // ===== Setup =====
 void setup() {
@@ -193,6 +305,7 @@ void setup() {
   // DHT
   dht1.begin();
   dht2.begin();
+  debugNetwork();
 }
 
 // ===== Loop =====
@@ -226,7 +339,7 @@ void loop() {
   unsigned long startMillis = millis();
 
   while(samplesWritten < totalSamples){
-    // ===== записуємо буфер =====
+    // ===== Writing buffer =====
     for(int i=0; i<BUF_SAMPLES && samplesWritten<totalSamples; i++){
       int raw = analogRead(MIC_PIN);
       int16_t sample = (raw-2048)<<4;
@@ -236,22 +349,22 @@ void loop() {
       while(micros() < lastMicros) yield();
     }
 
-    // ===== запис в SD =====
+    // ===== writing to sd =====
     size_t writeCount = ((samplesWritten % BUF_SAMPLES == 0) ? BUF_SAMPLES : samplesWritten % BUF_SAMPLES);
     size_t wrote = file.write((uint8_t*)buffer, writeCount * sizeof(int16_t));
     dataBytes += wrote;
 
-    // ===== фактичний час =====
+    // ===== Actual time =====
     int currentSec = (millis() - startMillis) / 1000;
     if(currentSec > RECORD_SECONDS) currentSec = RECORD_SECONDS;
 
     if(currentSec != lastSec){
       lastSec = currentSec;
 
-      // ===== прогрес-бар =====
+      // ===== progress bar =====
       drawProgress(currentSec, RECORD_SECONDS);
 
-      // ===== час =====
+      // ===== Time =====
       tft.setCursor(120, 10);
       tft.setTextColor(ST77XX_BLACK, ST77XX_WHITE);
       tft.setTextSize(1);
@@ -298,6 +411,7 @@ void loop() {
   tft.setTextColor(ST77XX_ORANGE);
   tft.setTextSize(1);
   tft.println("Done!");
-
-  delay(350);
+  delay(150);
+  playTTS();
+  delay(250);
 }
