@@ -6,18 +6,18 @@ MarvinLink is an open-source smart home platform that allows you to control your
 
 ## Features ✨
 
-- Voice-controlled smart home system  
+- Voice-controlled and fully autonomous smart home system
 - Custom AI processing of commands  
-- ESP32 microcontroller as the main device  
-- Python server backend for processing and AI responses  
-- Modular design: add new sensors, devices, and commands easily  
+- Low cost ESP32 or Orange pi microcontroller/singleboard computer as the main device  
+- Python server backend for processing and AI responses
+- Modular design: add new sensors, devices, and commands easily
 - Open-source and fully customizable
 
 ---
 
 ## Project Structure 📂
 
-This project uses **PlatformIO** for development and firmware management. The main structure is:
+This project uses **PlatformIO** for development and firmware management on esp32. The main structure is:
 
 ```
 MarvinLink/
@@ -48,9 +48,11 @@ MarvinLink/
 
 ### Prerequisites
 
-- [PlatformIO IDE](https://platformio.org/install) (VSCode recommended)  
+- [PlatformIO IDE](https://platformio.org/install) (Only for ESP32)
 - Python 3.11.x 
-- ESP32 board and some other modules
+- ESP32 / Orange pi zero 3 board and some other modules
+
+---
 
 ### Installation to ESP32
 
@@ -71,8 +73,6 @@ pio run
 ```bash
 pio run --target upload
 ```
-
----
 
 ## Usage 💡
 
