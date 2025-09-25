@@ -21,19 +21,23 @@ This project uses **PlatformIO** for development and firmware management. The ma
 
 ```
 MarvinLink/
-├── ESPSHome/ # Source code for ESP32
-├── pycache/
-├── nonstable/ # Experimental or unstable code
-├── old/ # Some old code
-├── uploads/ # Temporaly files from esp32
-├── ESPSHomeProject.code-workspace # Lite VSCode workspace configuration
-├── gptModelOffline.py # Offline GPT model integration
-├── gptModelOnline.py # Online GPT model integration
-├── main.py # Main Python script
-├── main_whisper.py # Whisper stt
-├── providers.py # Check for avaliable providers
-├── speechtt-470817-a69292656905.json # Speech synthesis model api
-└── testSampleRate.py # Sample rate testing script
+    ESP32DEVKIT/
+        ├── ESPSHome/ # Source code for ESP32
+        ├── pycache/
+        ├── nonstable/ # Experimental or unstable code
+        ├── old/ # Some old code
+        ├── uploads/ # Temporaly files from esp32
+        ├── ESPSHomeProject.code-workspace # Lite VSCode workspace configuration
+        ├── gptModelOffline.py # Offline GPT model integration
+        ├── gptModelOnline.py # Online GPT model integration
+        ├── main.py # Main Python script
+        ├── main_whisper.py # Whisper stt
+        ├── providers.py # Check for avaliable providers
+        ├── speechtt-470817-a69292656905.json # Speech synthesis model api
+        └── testSampleRate.py # Sample rate testing script
+    OPIZero3/
+        ├──
+        └──
 ```
 
 > Make sure to open this folder as a PlatformIO project in VSCode.
@@ -45,10 +49,10 @@ MarvinLink/
 ### Prerequisites
 
 - [PlatformIO IDE](https://platformio.org/install) (VSCode recommended)  
-- Python 3.x  
+- Python 3.11.x 
 - ESP32 board and some other modules
 
-### Installation
+### Installation to ESP32
 
 1. Clone the repository:
 ```bash
@@ -78,6 +82,11 @@ pio run --target upload
 - Customize commands and devices by editing the `src` code and Python backend  
 
 ---
+
+### Installation to Orange pi zero 3
+
+---
+
 
 ## MarvinLink Roadmap 🛠️
 
@@ -114,6 +123,4 @@ Feel free to fork the repository and create your own branches. Please make pull 
 This project is open-source and available for modification and redistribution.  
 
 ---
-
-Made with ❤️ and PlatformIO
 
