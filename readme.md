@@ -91,17 +91,22 @@ pio run --target upload
 ## MarvinLink Roadmap 🛠️
 
 ### ✅ Completed / Already Done
-- Initial project setup: ESP32 firmware (`main.cpp`) and Python backend (`main.py`, `main_whisper.py`)  
-- Voice command recognition and AI integration  
-- Multi-core processing optimization on ESP32  
-- PlatformIO configuration and VSCode workspace added  
-- Basic device control through Python backend  
+- Initial prototype project setup: ESP32 firmware (`main.cpp`) and Python backend (`main.py`, `main_whisper.py`)
+- Basic device control through Python backend
+- Voice command recognition and AI integration
+- Added base sensors support (temperature, humidity, etc.)
+- Multi-core processing optimization on ESP32
+
+### 🔧 In Progress
+- Create a convenient project structure
+- Move an project to Orange pi
+- Add wake-word detection and optimize resources control
 
 ### 🔧 Next Steps / In Progress
 1. Implement audio output for responses (text-to-speech)
 2. Create a web interface for control and monitoring  
-3. Port the system to Raspberry Pi for fully autonomous operation and integrate wake word detection (no external server needed)
-5. Integrate sensors properly and connect them via Bluetooth through the web interface  
+3. Port the system to Orange Pi for fully autonomous operation and integrate wake word detection (no external server needed)
+5. Integrate sensors properly and connect them via Bluetooth or local network through the web interface easly
 6. Fit all components into a custom housing
 
 ### 🚀 Future Development
