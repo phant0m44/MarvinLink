@@ -26,6 +26,20 @@ print(f"Читаємо {input_chunk} семплів, конвертуємо в {
 # Налаштування PyAudio
 pa = pyaudio.PyAudio()
 
+# Функція для пошуку USB аудіо пристрою
+def find_usb_audio_device():
+    """Знаходить USB аудіо пристрій"""
+    for i in range(pa.get_device_count()):
+        info = pa.get_device_info_by_index(i)
+        if info['maxInputChannels'] > 0 and 'USB' in info['name']:
+            print(f"Знайдено USB аудіо: {info['name']} (індекс {i})")
+            return i
+    print("USB аудіо не знайдено, використовується стандартний пристрій")
+    return None
+
+# Знаходимо USB аудіо пристрій
+usb_device_index = find_usb_audio_device()
+
 # Буфер для накопичення даних
 audio_buffer = np.array([], dtype=np.int16)
 
@@ -36,7 +50,7 @@ stream = pa.open(
     format=pyaudio.paInt16,
     input=True,
     frames_per_buffer=1024,  # Стандартний розмір буфера
-    input_device_index=None
+    input_device_index=usb_device_index  # Використовуємо USB пристрій
 )
 
 print("Слухаю wake word 'okay marvin'...")
