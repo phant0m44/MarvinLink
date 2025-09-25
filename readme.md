@@ -1,6 +1,6 @@
 # MarvinLink 🏠
 
-MarvinLink is an open-source smart home platform that allows you to control your home devices using voice commands and AI. This project is designed to be flexible and customizable so anyone can create their own smart home functionalities without being limited by commercial solutions.
+MarvinLink is an open-source smart home platform that allows you to control your home devices using voice commands and AI. This project is designed to be flexible and customizable easly so anyone can create their own smart home functionalities without being limited by commercial solutions.
 
 ---
 
