@@ -99,15 +99,15 @@ pio run --target upload
 
 ### 🔧 In Progress
 - Create a convenient project structure
-- Move an project to Orange pi
-- Add wake-word detection and optimize resources control
+- Port the system to Orange Pi for fully autonomous operation
+- integrate wake word detection (no external server needed)
+- Optimize optimal resources control
 
-### 🔧 Next Steps / In Progress
-1. Implement audio output for responses (text-to-speech)
-2. Create a web interface for control and monitoring  
-3. Port the system to Orange Pi for fully autonomous operation and integrate wake word detection (no external server needed)
-5. Integrate sensors properly and connect them via Bluetooth or local network through the web interface easly
-6. Fit all components into a custom housing
+### 🔧 Next Steps
+1. Implement audio output for responses(text-to-speech) on ESP32
+2. Create a web interface for control and monitoring
+3. Integrate sensors properly and connect them via Bluetooth or local network through the web interface easly
+4. Fit all components into a custom housing
 
 ### 🚀 Future Development
 - Bug fixes and stability improvements  
