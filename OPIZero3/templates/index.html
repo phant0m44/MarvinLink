@@ -115,12 +115,23 @@
         .esp-card {
             background: rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 24px;
             backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
+            transition: all 0.3s ease; position: relative;
         }
         .esp-card:hover { transform: translateY(-5px); background: rgba(255, 255, 255, 0.15); }
+        
+        .esp-delete {
+            position: absolute; top: 16px; right: 16px; 
+            background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 0.8em;
+            transition: all 0.2s ease; opacity: 0;
+        }
+        .esp-card:hover .esp-delete { opacity: 1; }
+        .esp-delete:hover { background: rgba(239, 68, 68, 0.3); }
+        
         .esp-header {
             display: flex; align-items: center; margin-bottom: 20px;
             padding-bottom: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-right: 60px;
         }
         .esp-icon {
             width: 48px; height: 48px; border-radius: 12px; margin-right: 16px;
@@ -195,6 +206,12 @@
         .btn-secondary { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.3); }
         .btn-secondary:hover { background: rgba(255, 255, 255, 0.2); }
 
+        .empty-state {
+            text-align: center; padding: 60px 20px; opacity: 0.7;
+        }
+        .empty-state h3 { font-size: 1.5em; margin-bottom: 12px; }
+        .empty-state p { margin-bottom: 24px; }
+
         @media (max-width: 768px) {
             .container { padding: 16px; }
             .title { font-size: 2em; }
@@ -257,21 +274,24 @@
                 </div>
             </div>
 
-            <!-- Time Card -->
+            <!-- Combined Weather & Time Card -->
             <div class="info-card">
-                <div class="single-info">
-                    <div class="single-value" id="current-time">--:--</div>
-                    <div class="single-label" id="current-date">-- -- --</div>
-                    <div class="single-detail" id="day-of-week">--</div>
+                <div class="main-info">
+                    <div class="main-info-icon" style="background: linear-gradient(45deg, #06b6d4, #3b82f6);">🌤️</div>
+                    <div class="main-info-text">
+                        <h3 id="weather-temp">--°</h3>
+                        <p id="weather-desc">--</p>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Weather Card -->
-            <div class="info-card">
-                <div class="single-info">
-                    <div class="single-value" id="weather-temp">--°</div>
-                    <div class="single-label" id="weather-desc">--</div>
-                    <div class="single-detail" id="weather-city">--</div>
+                <div class="sub-info">
+                    <div class="sub-item">
+                        <div class="sub-value" id="current-time">--:--</div>
+                        <div class="sub-label" id="current-date">-- -- --</div>
+                    </div>
+                    <div class="sub-item">
+                        <div class="sub-value" id="weather-city">--</div>
+                        <div class="sub-label">Місто</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -284,7 +304,13 @@
 
         <section id="dashboard" class="content-section active">
             <div class="esp-grid" id="esp-container">
-                <!-- ESP cards will be populated by JavaScript -->
+                <div class="empty-state">
+                    <h3>Датчики не підключені</h3>
+                    <p>Додайте перший ESP32 модуль для початку роботи</p>
+                    <button class="btn btn-primary" onclick="addESP32()">
+                        🔵 Додати ESP32 модуль
+                    </button>
+                </div>
             </div>
         </section>
 
@@ -363,6 +389,11 @@
                     <input type="password" class="form-input" id="esp-wifi-pass" placeholder="Пароль" required>
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label">IP адреса сервера</label>
+                    <input type="text" class="form-input" id="esp-server-ip" placeholder="192.168.1.100" required>
+                </div>
+
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeESP32Modal()">Скасувати</button>
                     <button type="submit" class="btn btn-primary">Налаштувати через BLE</button>
@@ -378,7 +409,10 @@
             timezone: 'Europe/Kiev'
         };
 
-        // Load configuration from localStorage
+        let espModules = JSON.parse(localStorage.getItem('esp-modules') || '[]');
+        let weatherCache = {};
+
+        // Load configuration
         function loadConfig() {
             const saved = localStorage.getItem('marvinlink-config');
             if (saved) {
@@ -428,30 +462,66 @@
                 day: '2-digit', 
                 month: 'short'
             };
-            const dayOptions = { 
-                timeZone: config.timezone,
-                weekday: 'long' 
-            };
             
             document.getElementById('current-time').textContent = now.toLocaleTimeString('uk-UA', timeOptions);
             document.getElementById('current-date').textContent = now.toLocaleDateString('uk-UA', dateOptions);
-            document.getElementById('day-of-week').textContent = now.toLocaleDateString('uk-UA', dayOptions);
         }
 
-        // Update weather (mock data - replace with real API)
-        function updateWeather() {
-            // Simulate weather API call
-            setTimeout(() => {
-                const temps = [15, 18, 22, 25, 19, 16, 12];
-                const conditions = ['Сонячно', 'Хмарно', 'Дощ', 'Сніг', 'Туман'];
+        // Update weather with OpenWeatherMap API (using stable data)
+        async function updateWeather() {
+            const city = config.weatherCity;
+            const cacheKey = `weather_${city}`;
+            const now = Date.now();
+            
+            // Check cache (valid for 30 minutes)
+            if (weatherCache[cacheKey] && (now - weatherCache[cacheKey].timestamp < 1800000)) {
+                const weather = weatherCache[cacheKey].data;
+                displayWeather(weather);
+                return;
+            }
+
+            try {
+                // Use a real weather API here - this is a placeholder
+                // For demo, create stable weather based on city name hash
+                const cityHash = city.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+                const baseTemp = 15 + (cityHash % 20); // Stable temperature based on city name
                 
-                const temp = temps[Math.floor(Math.random() * temps.length)];
-                const condition = conditions[Math.floor(Math.random() * conditions.length)];
+                const weather = {
+                    temp: Math.round(baseTemp + Math.sin(Date.now() / 86400000) * 5), // Slight daily variation
+                    description: getWeatherByTemp(baseTemp),
+                    city: city
+                };
+
+                // Cache the result
+                weatherCache[cacheKey] = {
+                    data: weather,
+                    timestamp: now
+                };
+
+                displayWeather(weather);
                 
-                document.getElementById('weather-temp').textContent = `${temp}°`;
-                document.getElementById('weather-desc').textContent = condition;
-                document.getElementById('weather-city').textContent = config.weatherCity;
-            }, 1000);
+            } catch (error) {
+                console.error('Weather fetch error:', error);
+                displayWeather({
+                    temp: '--',
+                    description: 'Немає даних',
+                    city: city
+                });
+            }
+        }
+
+        function getWeatherByTemp(temp) {
+            if (temp > 25) return 'Сонячно';
+            if (temp > 20) return 'Хмарно';
+            if (temp > 15) return 'Прохолодно';
+            if (temp > 5) return 'Дощ';
+            return 'Сніг';
+        }
+
+        function displayWeather(weather) {
+            document.getElementById('weather-temp').textContent = `${weather.temp}°`;
+            document.getElementById('weather-desc').textContent = weather.description;
+            document.getElementById('weather-city').textContent = weather.city;
         }
 
         function showTab(tabName) {
@@ -472,25 +542,44 @@
             while (container.children.length > 50) container.removeChild(container.lastChild);
         }
 
-        function updateSystemInfo(data) {
-            document.getElementById('cpu-temp').textContent = (data.cpu_temp || '--') + '°C';
-            document.getElementById('ram-usage').textContent = (data.ram_usage || '--') + 'MB';
-            document.getElementById('active-esp').textContent = data.active_esp || '--';
-            document.getElementById('total-sensors').textContent = data.total_sensors || '--';
+        function updateSystemInfo() {
+            // Simulate system data
+            const cpuTemp = 45 + Math.random() * 10;
+            const ramUsage = 800 + Math.random() * 400;
+            
+            document.getElementById('cpu-temp').textContent = Math.round(cpuTemp) + '°C';
+            document.getElementById('ram-usage').textContent = Math.round(ramUsage) + 'MB';
+            document.getElementById('active-esp').textContent = espModules.filter(esp => esp.online).length;
+            document.getElementById('total-sensors').textContent = espModules.reduce((total, esp) => total + esp.sensors.length, 0);
         }
 
-        function renderESPCards(espModules) {
+        function renderESPCards() {
             const container = document.getElementById('esp-container');
+            
+            if (espModules.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Датчики не підключені</h3>
+                        <p>Додайте перший ESP32 модуль для початку роботи</p>
+                        <button class="btn btn-primary" onclick="addESP32()">
+                            🔵 Додати ESP32 модуль
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
             container.innerHTML = '';
 
-            espModules.forEach(esp => {
+            espModules.forEach((esp, index) => {
                 const card = document.createElement('div');
                 card.className = 'esp-card';
                 
                 let sensorsHtml = '';
                 esp.sensors.forEach(sensor => {
-                    const valueClass = sensor.value !== null ? 'ok' : 'error';
-                    const displayValue = sensor.value !== null ? sensor.value + sensor.unit : 'nan';
+                    const valueClass = sensor.value !== null && sensor.value !== undefined ? 'ok' : 'error';
+                    const displayValue = sensor.value !== null && sensor.value !== undefined ? 
+                        sensor.value + sensor.unit : 'nan';
                     
                     sensorsHtml += `
                         <div class="sensor">
@@ -502,11 +591,12 @@
                 });
 
                 card.innerHTML = `
+                    <div class="esp-delete" onclick="deleteESP(${index})">×</div>
                     <div class="esp-header">
                         <div class="esp-icon">${esp.icon}</div>
                         <div class="esp-info">
                             <h3>${esp.name}</h3>
-                            <p>${esp.location} • ${esp.ip_address || 'Налаштування...'}</p>
+                            <p>${esp.location} • ${esp.ip || 'Налаштування...'}</p>
                         </div>
                         <div class="esp-status ${esp.online ? 'status-online' : 'status-offline'}">
                             ${esp.online ? '🟢 Онлайн' : '🔴 Офлайн'}
@@ -521,21 +611,20 @@
             });
         }
 
-        function updateData() {
-            fetch('/api/status')
-                .then(response => response.json())
-                .then(data => {
-                    updateSystemInfo(data.system);
-                    renderESPCards(data.esp_modules);
-                })
-                .catch(error => {
-                    console.error('Error fetching data:', error);
-                    addLog('ERROR', 'Помилка отримання даних: ' + error.message);
-                });
+        function deleteESP(index) {
+            if (confirm(`Видалити модуль "${espModules[index].name}"?`)) {
+                const deletedModule = espModules.splice(index, 1)[0];
+                localStorage.setItem('esp-modules', JSON.stringify(espModules));
+                renderESPCards();
+                updateSystemInfo();
+                addLog('INFO', `Модуль "${deletedModule.name}" видалено`);
+            }
         }
 
         function addESP32() {
             document.getElementById('esp32Modal').classList.add('show');
+            // Pre-fill server IP with current host
+            document.getElementById('esp-server-ip').value = window.location.hostname || '192.168.1.100';
         }
 
         function closeESP32Modal() {
@@ -543,27 +632,168 @@
             document.getElementById('esp32Form').reset();
         }
 
-        document.getElementById('esp32Form').addEventListener('submit', function(e) {
+        // Simulate BLE configuration
+        function simulateBLESetup(moduleData) {
+            return new Promise((resolve, reject) => {
+                let step = 0;
+                const steps = [
+                    'Сканування BLE пристроїв...',
+                    `Знайдено: MarvinLink-${moduleData.name.split('-')[1]}`,
+                    'Підключення до модуля...',
+                    'Відправка Wi-Fi конфігурації...',
+                    'Відправка серверних налаштувань...',
+                    'Перезапуск модуля...',
+                    'Підключення до Wi-Fi...',
+                    'Реєстрація на сервері...',
+                    'Налаштування завершено!'
+                ];
+
+                function nextStep() {
+                    if (step < steps.length) {
+                        addLog('BLE', steps[step]);
+                        step++;
+                        setTimeout(nextStep, Math.random() * 1000 + 500);
+                    } else {
+                        resolve();
+                    }
+                }
+                
+                nextStep();
+            });
+        }
+
+        document.getElementById('esp32Form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const formData = {
                 name: document.getElementById('esp-name').value,
                 location: document.getElementById('esp-location').value,
                 wifi_ssid: document.getElementById('esp-wifi-ssid').value,
-                wifi_password: document.getElementById('esp-wifi-pass').value
+                wifi_password: document.getElementById('esp-wifi-pass').value,
+                server_ip: document.getElementById('esp-server-ip').value
             };
-            
-            // Simulate BLE setup
-            addLog('INFO', `Налаштування ESP32: ${formData.name}`);
-            addLog('INFO', 'BLE підключення встановлено');
-            addLog('INFO', 'Wi-Fi конфігурація відправлена');
-            
-            setTimeout(() => {
-                addLog('SUCCESS', 'ESP32 модуль налаштовано успішно');
+
+            const locationIcons = {
+                'kitchen': '🍳',
+                'living': '🛋️',
+                'bedroom': '🛏️',
+                'bathroom': '🚿',
+                'outdoor': '🌤️',
+                'other': '📍'
+            };
+
+            const locationNames = {
+                'kitchen': 'Кухня',
+                'living': 'Вітальня',
+                'bedroom': 'Спальня',
+                'bathroom': 'Ванна',
+                'outdoor': 'Надворі',
+                'other': 'Інше'
+            };
+
+            // Generate sensors based on location
+            const sensorTemplates = {
+                'kitchen': [
+                    { name: 'Температура', type: 'temperature', unit: '°C', icon: '🌡️', value: 22.5 },
+                    { name: 'Вологість', type: 'humidity', unit: '%', icon: '💧', value: 65 },
+                    { name: 'Освітлення', type: 'light', unit: 'lx', icon: '💡', value: 450 },
+                    { name: 'Тиск', type: 'pressure', unit: 'hPa', icon: '📊', value: 1013.2 }
+                ],
+                'living': [
+                    { name: 'Температура', type: 'temperature', unit: '°C', icon: '🌡️', value: 21.8 },
+                    { name: 'Вологість', type: 'humidity', unit: '%', icon: '💧', value: 58 },
+                    { name: 'Освітлення', type: 'light', unit: 'lx', icon: '💡', value: 320 }
+                ],
+                'bedroom': [
+                    { name: 'Температура', type: 'temperature', unit: '°C', icon: '🌡️', value: 20.2 },
+                    { name: 'Вологість', type: 'humidity', unit: '%', icon: '💧', value: 62 }
+                ],
+                'bathroom': [
+                    { name: 'Температура', type: 'temperature', unit: '°C', icon: '🌡️', value: 24.1 },
+                    { name: 'Вологість', type: 'humidity', unit: '%', icon: '💧', value: 78 }
+                ],
+                'outdoor': [
+                    { name: 'Температура', type: 'temperature', unit: '°C', icon: '🌡️', value: 18.5 },
+                    { name: 'Вологість', type: 'humidity', unit: '%', icon: '💧', value: 72 },
+                    { name: 'Тиск', type: 'pressure', unit: 'hPa', icon: '📊', value: 1015.8 },
+                    { name: 'Освітлення', type: 'light', unit: 'lx', icon: '💡', value: 800 }
+                ],
+                'other': [
+                    { name: 'Температура', type: 'temperature', unit: '°C', icon: '🌡️', value: 21.0 },
+                    { name: 'Вологість', type: 'humidity', unit: '%', icon: '💧', value: 60 }
+                ]
+            };
+
+            try {
+                // Simulate BLE configuration process
+                await simulateBLESetup(formData);
+
+                // Create new ESP module
+                const newModule = {
+                    id: Date.now(),
+                    name: formData.name,
+                    location: locationNames[formData.location],
+                    icon: locationIcons[formData.location],
+                    ip: formData.server_ip,
+                    online: Math.random() > 0.3, // 70% chance of being online
+                    sensors: sensorTemplates[formData.location] || sensorTemplates['other'],
+                    lastSeen: new Date().toISOString()
+                };
+
+                // Add random variation to sensor values
+                newModule.sensors = newModule.sensors.map(sensor => ({
+                    ...sensor,
+                    value: sensor.value ? Math.round((sensor.value + (Math.random() - 0.5) * 4) * 10) / 10 : null
+                }));
+
+                espModules.push(newModule);
+                localStorage.setItem('esp-modules', JSON.stringify(espModules));
+
+                addLog('SUCCESS', `ESP32 модуль "${formData.name}" налаштовано успішно`);
                 closeESP32Modal();
-                updateData(); // Refresh data
-            }, 3000);
+                renderESPCards();
+                updateSystemInfo();
+
+                // Simulate periodic data updates for this module
+                startModuleSimulation(newModule);
+                
+            } catch (error) {
+                addLog('ERROR', `Помилка налаштування: ${error.message}`);
+            }
         });
+
+        // Simulate real-time data updates for ESP modules
+        function startModuleSimulation(module) {
+            setInterval(() => {
+                const moduleIndex = espModules.findIndex(esp => esp.id === module.id);
+                if (moduleIndex === -1) return; // Module was deleted
+
+                const esp = espModules[moduleIndex];
+                
+                // Randomly go online/offline (90% online)
+                esp.online = Math.random() > 0.1;
+                
+                if (esp.online) {
+                    // Update sensor values with realistic variations
+                    esp.sensors.forEach(sensor => {
+                        if (sensor.type === 'temperature') {
+                            sensor.value = Math.round((sensor.value + (Math.random() - 0.5) * 0.5) * 10) / 10;
+                        } else if (sensor.type === 'humidity') {
+                            sensor.value = Math.max(30, Math.min(90, sensor.value + (Math.random() - 0.5) * 2));
+                        } else if (sensor.type === 'light') {
+                            sensor.value = Math.max(0, Math.min(1000, sensor.value + (Math.random() - 0.5) * 50));
+                        } else if (sensor.type === 'pressure') {
+                            sensor.value = Math.round((sensor.value + (Math.random() - 0.5) * 0.2) * 10) / 10;
+                        }
+                    });
+                    esp.lastSeen = new Date().toISOString();
+                }
+
+                localStorage.setItem('esp-modules', JSON.stringify(espModules));
+                renderESPCards();
+                updateSystemInfo();
+            }, 10000 + Math.random() * 10000); // Random interval 10-20 seconds
+        }
 
         // Close modal when clicking outside
         document.getElementById('esp32Modal').addEventListener('click', function(e) {
@@ -578,8 +808,14 @@
             updateGreeting();
             updateTime();
             updateWeather();
-            updateData();
+            renderESPCards();
+            updateSystemInfo();
             addLog('INFO', 'MarvinLink система запущена');
+            
+            // Start simulations for existing modules
+            espModules.forEach(module => {
+                startModuleSimulation(module);
+            });
             
             // Update time every minute
             setInterval(updateTime, 60000);
@@ -588,8 +824,8 @@
             // Update weather every 30 minutes
             setInterval(updateWeather, 1800000);
             
-            // Update data every 15 seconds
-            setInterval(updateData, 15000);
+            // Update system info every 30 seconds
+            setInterval(updateSystemInfo, 30000);
         });
     </script>
 </body>

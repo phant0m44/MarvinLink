@@ -68,3 +68,139 @@
 2025-09-28 19:31:15,291 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
 2025-09-28 19:31:15,966 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:31:15] "GET / HTTP/1.1" 200 -
 2025-09-28 19:31:16,900 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:31:16] "GET / HTTP/1.1" 200 -
+2025-09-28 19:31:34,922 - __main__ - INFO - Database initialized successfully
+2025-09-28 19:31:34,923 - __main__ - ERROR - Failed to insert demo data: table sensors has no column named esp_id
+2025-09-28 19:31:40,471 - __main__ - ERROR - Failed to log event: database is locked
+2025-09-28 19:31:40,471 - __main__ - INFO - Starting MarvinLink Smart Home System
+2025-09-28 19:31:40,473 - __main__ - INFO - Background tasks started
+2025-09-28 19:31:40,503 - __main__ - INFO - Old data cleaned up
+2025-09-28 19:31:41,745 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.9:5000
+2025-09-28 19:31:41,746 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-09-28 19:31:42,251 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:31:42] "GET / HTTP/1.1" 200 -
+2025-09-28 19:31:42,330 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:31:42,331 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:31:42] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:31:57,328 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:31:57,328 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:31:57] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:32:12,335 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:32:12,336 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:32:12] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:32:27,796 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:32:27,796 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:32:27] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:32:43,038 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:32:43,039 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:32:43] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:32:57,995 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:32:57,995 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:32:57] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:33:13,002 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:33:13,002 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:33:13] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:33:28,016 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:33:28,017 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:33:28] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:33:43,172 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:33:43,172 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:33:43] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:33:58,520 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:33:58,520 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:33:58] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:34:13,735 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:34:13,735 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:34:13] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:34:28,936 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:34:28,937 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:34:28] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:34:44,131 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:34:44,132 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:34:44] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:34:59,304 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:34:59,305 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:34:59] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:35:14,591 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:35:14,591 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:35:14] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:35:29,812 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:35:29,813 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:35:29] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:35:44,818 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:35:44,818 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:35:44] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:35:59,955 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:35:59,955 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:35:59] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:36:14,836 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:36:14,836 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:36:14] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:36:29,887 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:36:29,887 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:36:29] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:36:44,854 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:36:44,855 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:36:44] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:37:00,017 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:37:00,017 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:37:00] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:37:14,876 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:37:14,877 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:37:14] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:37:29,874 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:37:29,874 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:37:29] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:37:45,372 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:37:45,372 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:37:45] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:38:00,536 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:38:00,537 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:38:00] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:38:15,689 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:38:15,690 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:38:15] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:38:30,978 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:38:30,978 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:38:30] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:38:46,198 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:38:46,198 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:38:46] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:39:01,374 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:39:01,374 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:39:01] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:39:16,541 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:39:16,541 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:39:16] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:39:31,755 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:39:31,756 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:39:31] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:39:46,769 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:39:46,769 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:39:46] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:40:02,642 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:40:02,643 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:40:02] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:40:17,942 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:40:17,942 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:40:17] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:40:33,101 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:40:33,101 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:40:33] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:40:48,304 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:40:48,305 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:40:48] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:41:03,474 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:41:03,475 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:41:03] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:41:18,697 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:41:18,698 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:41:18] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:41:33,882 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:41:33,882 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:41:33] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:41:48,884 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:41:48,884 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:41:48] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:42:04,426 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:42:04,427 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:42:04] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:42:19,592 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:42:19,593 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:42:19] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:42:34,809 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:42:34,811 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:42:34] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:42:50,027 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:42:50,027 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:42:50] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:43:05,209 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:43:05,209 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:43:05] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:43:20,353 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:43:20,354 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:43:20] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:43:35,560 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:43:35,560 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:43:35] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:43:50,824 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:43:50,826 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:43:50] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:44:06,020 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:44:06,021 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:44:06] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:44:21,288 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:44:21,290 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:44:21] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:44:36,506 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:44:36,506 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:44:36] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:44:51,512 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:44:51,513 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:44:51] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:45:06,518 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:45:06,519 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:45:06] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:45:21,524 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:45:21,524 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:45:21] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:45:37,467 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:45:37,467 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:45:37] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:45:52,652 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:45:52,652 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:45:52] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:46:07,793 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:46:07,794 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:46:07] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:46:22,953 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:46:22,954 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:46:22] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:46:38,181 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:46:38,181 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:46:38] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:46:53,394 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:46:53,394 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:46:53] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:47:08,563 - __main__ - ERROR - Error getting status: no such column: is_enabled
+2025-09-28 19:47:08,564 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:47:08] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
