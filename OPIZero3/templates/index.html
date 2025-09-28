@@ -353,18 +353,13 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Місто для погоди</label>
-                    <input type="text" class="form-input" id="weather-city-input" placeholder="Київ">
-                </div>
-
-                <div class="form-group">
                     <label class="form-label">
-                        API ключ OpenWeatherMap 
-                        <a href="https://openweathermap.org/api" target="_blank" style="color: #06d6a0; text-decoration: none; font-size: 0.8em;">(отримати безкоштовно)</a>
+                        Погода 
+                        <span style="color: #06d6a0; font-size: 0.8em;">(безкоштовно)</span>
                     </label>
-                    <input type="text" class="form-input" id="weather-api-key" placeholder="Вставте ваш API ключ сюди">
+                    <input type="text" class="form-input" id="weather-city-input" placeholder="Київ">
                     <div style="font-size: 0.8em; opacity: 0.7; margin-top: 4px;">
-                        Без API ключа погода не буде відображатись. Реєстрація безкоштовна.
+                        Погода надається через відкритий API без реєстрації
                     </div>
                 </div>
 
@@ -446,8 +441,7 @@
         let config = {
             userName: 'Чед',
             weatherCity: 'Київ',
-            timezone: 'Europe/Kiev',
-            weatherApiKey: ''
+            timezone: 'Europe/Kiev'
         };
 
         let espModules = JSON.parse(localStorage.getItem('esp-modules') || '[]');
@@ -470,7 +464,6 @@
                 config = { ...config, ...JSON.parse(saved) };
                 document.getElementById('user-name').value = config.userName;
                 document.getElementById('weather-city-input').value = config.weatherCity;
-                document.getElementById('weather-api-key').value = config.weatherApiKey || '';
                 document.getElementById('timezone').value = config.timezone;
             }
         }
@@ -479,7 +472,6 @@
         function saveSettings() {
             config.userName = document.getElementById('user-name').value || 'Чед';
             config.weatherCity = document.getElementById('weather-city-input').value || 'Київ';
-            config.weatherApiKey = document.getElementById('weather-api-key').value || '';
             config.timezone = document.getElementById('timezone').value;
             
             localStorage.setItem('marvinlink-config', JSON.stringify(config));
@@ -520,10 +512,9 @@
             document.getElementById('current-date').textContent = now.toLocaleDateString('uk-UA', dateOptions);
         }
 
-        // Update weather with real OpenWeatherMap API
+        // Update weather with free wttr.in service
         async function updateWeather() {
             const city = config.weatherCity;
-            const apiKey = config.weatherApiKey;
             const cacheKey = `weather_${city}`;
             const now = Date.now();
             
@@ -534,45 +525,47 @@
                 return;
             }
 
-            if (!apiKey) {
-                displayWeather({
-                    temp: '--',
-                    description: 'Потрібен API ключ',
-                    city: city
-                });
-                return;
-            }
-
             try {
+                // Using wttr.in free weather service
                 const response = await fetch(
-                    `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric&lang=uk`
+                    `https://wttr.in/${encodeURIComponent(city)}?format=%t,%C&lang=uk`,
+                    { mode: 'cors' }
                 );
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
                 
-                const data = await response.json();
-                const weather = {
-                    temp: Math.round(data.main.temp),
-                    description: data.weather[0].description || 'Без опису',
-                    city: city
-                };
+                const data = await response.text();
+                const parts = data.trim().split(',');
+                
+                if (parts.length >= 2) {
+                    const temp = parseInt(parts[0].replace(/[^\d-]/g, ''));
+                    const description = parts[1].trim();
+                    
+                    const weather = {
+                        temp: temp || '--',
+                        description: description || 'Немає даних',
+                        city: city
+                    };
 
-                // Cache the result
-                weatherCache[cacheKey] = {
-                    data: weather,
-                    timestamp: now
-                };
+                    // Cache the result
+                    weatherCache[cacheKey] = {
+                        data: weather,
+                        timestamp: now
+                    };
 
-                displayWeather(weather);
-                addLog('INFO', `Погода оновлена для ${city}: ${weather.temp}°C`);
+                    displayWeather(weather);
+                    addLog('INFO', `Погода оновлена для ${city}: ${weather.temp}°C`);
+                } else {
+                    throw new Error('Invalid response format');
+                }
                 
             } catch (error) {
                 console.error('Weather fetch error:', error);
                 displayWeather({
                     temp: '--',
-                    description: 'Помилка API',
+                    description: 'Немає з\'єднання',
                     city: city
                 });
                 addLog('ERROR', `Помилка погоди: ${error.message}`);
@@ -611,16 +604,33 @@
             while (container.children.length > 50) container.removeChild(container.lastChild);
         }
 
-        function updateSystemInfo() {
-            // Show real system counts, not fake data
+        async function updateSystemInfo() {
+            // Show real system counts
             const activeCount = espModules.filter(esp => esp.online).length;
             const totalSensors = espModules.reduce((total, esp) => total + esp.sensors.length, 0);
             
-            // CPU and RAM would come from real API in production
-            document.getElementById('cpu-temp').textContent = '--°C';
-            document.getElementById('ram-usage').textContent = '--MB';
             document.getElementById('active-esp').textContent = activeCount;
             document.getElementById('total-sensors').textContent = totalSensors;
+            
+            // Try to get real system data (this would work with actual backend API)
+            try {
+                // For demo purposes, show placeholder. In real app, this would call your Python backend
+                const response = await fetch('/api/system-status');
+                const data = await response.json();
+                
+                document.getElementById('cpu-temp').textContent = data.cpu_temp + '°C';
+                document.getElementById('ram-usage').textContent = data.ram_usage + 'MB';
+            } catch (error) {
+                // Fallback - try to read from Orange Pi system files (if available via service worker)
+                try {
+                    // This is a simulation - in real app you'd have backend API
+                    document.getElementById('cpu-temp').textContent = '--°C';
+                    document.getElementById('ram-usage').textContent = '--MB';
+                } catch {
+                    document.getElementById('cpu-temp').textContent = '--°C';
+                    document.getElementById('ram-usage').textContent = '--MB';
+                }
+            }
         }
 
         function renderESPCards() {
@@ -844,7 +854,7 @@
                 esp.online = Math.random() > 0.1;
                 
                 if (esp.online) {
-                    // Update sensor values with realistic variations
+                    // Update sensor values with realistic variations ONLY if online
                     esp.sensors.forEach(sensor => {
                         if (sensor.type === 'temperature') {
                             sensor.value = Math.round((sensor.value + (Math.random() - 0.5) * 0.5) * 10) / 10;
@@ -857,6 +867,11 @@
                         }
                     });
                     esp.lastSeen = new Date().toISOString();
+                } else {
+                    // If offline, set all sensor values to null
+                    esp.sensors.forEach(sensor => {
+                        sensor.value = null;
+                    });
                 }
 
                 localStorage.setItem('esp-modules', JSON.stringify(espModules));

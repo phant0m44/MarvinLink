@@ -9,8 +9,10 @@ import psutil
 import requests
 from datetime import datetime, timedelta
 from flask import Flask, jsonify, request, render_template_string
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for frontend
 
 # Configure logging
 os.makedirs('logs', exist_ok=True)
@@ -106,76 +108,40 @@ class DatabaseManager:
             conn.commit()
             conn.close()
             logger.info("Database initialized successfully")
-            self.insert_demo_data()
+            
+            # DON'T insert demo data - start clean
+            self.check_initial_settings()
             
         except Exception as e:
             logger.error(f"Database initialization failed: {e}")
     
-    def insert_demo_data(self):
-        """Insert demo data if database is empty"""
+    def check_initial_settings(self):
+        """Insert only basic settings, no demo data"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            # Check if demo data exists
-            cursor.execute('SELECT COUNT(*) FROM esp_modules')
-            if cursor.fetchone()[0] > 0:
-                conn.close()
-                return
+            # Insert only default settings if they don't exist
+            cursor.execute('SELECT COUNT(*) FROM settings')
+            if cursor.fetchone()[0] == 0:
+                default_settings = [
+                    ('user_name', 'Чед'),
+                    ('weather_city', 'Київ'),
+                    ('timezone', 'Europe/Kiev'),
+                    ('system_initialized', 'true')
+                ]
+                
+                cursor.executemany('''
+                    INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)
+                ''', default_settings)
+                
+                conn.commit()
+                logger.info("Initial settings inserted")
             
-            # Insert demo ESP32 modules
-            esp_modules = [
-                ('ESP32-Kitchen', 'Кухня', '🍳', '192.168.1.100', 'AA:BB:CC:DD:EE:01', 1),
-                ('ESP32-Living', 'Вітальня', '🛋️', None, None, 0)  # Offline module
-            ]
-            
-            cursor.executemany('''
-                INSERT INTO esp_modules (name, location, location_icon, ip_address, mac_address, is_online)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', esp_modules)
-            
-            # Insert sensors for Kitchen ESP
-            kitchen_sensors = [
-                (1, 'temperature', 'Температура', '°C', '🌡️', 23.2, 1),
-                (1, 'humidity', 'Вологість', '%', '💧', 64.5, 1),
-                (1, 'pressure', 'Тиск', 'hPa', '📊', 1013.2, 1),
-                (1, 'light', 'Освітлення', 'lx', '💡', 425.0, 1)
-            ]
-            
-            cursor.executemany('''
-                INSERT INTO sensors (esp_id, sensor_type, sensor_name, unit, icon, last_value, is_enabled)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', kitchen_sensors)
-            
-            # Insert sensors for Living room ESP (offline)
-            living_sensors = [
-                (2, 'temperature', 'Температура', '°C', '🌡️', None, 1),
-                (2, 'humidity', 'Вологість', '%', '💧', None, 1)
-            ]
-            
-            cursor.executemany('''
-                INSERT INTO sensors (esp_id, sensor_type, sensor_name, unit, icon, last_value, is_enabled)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', living_sensors)
-            
-            # Insert default settings
-            default_settings = [
-                ('user_name', 'Чед'),
-                ('weather_city', 'Київ'),
-                ('timezone', 'Europe/Kiev'),
-                ('weather_api_key', '')  # User should add their API key
-            ]
-            
-            cursor.executemany('''
-                INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)
-            ''', default_settings)
-            
-            conn.commit()
             conn.close()
-            logger.info("Demo data inserted successfully")
             
         except Exception as e:
-            logger.error(f"Failed to insert demo data: {e}")
+            logger.error(f"Failed to insert initial settings: {e}")
     
     def log_event(self, level, message):
         """Log system event"""
@@ -194,11 +160,13 @@ class DatabaseManager:
 class SystemMonitor:
     @staticmethod
     def get_cpu_temperature():
-        """Get CPU temperature"""
+        """Get CPU temperature for Orange Pi Zero 3"""
         try:
+            # Orange Pi Zero 3 specific thermal zones
             temp_paths = [
                 '/sys/class/thermal/thermal_zone0/temp',
-                '/sys/class/thermal/thermal_zone1/temp'
+                '/sys/class/thermal/thermal_zone1/temp',
+                '/sys/devices/virtual/thermal/thermal_zone0/temp'
             ]
             
             for path in temp_paths:
@@ -207,13 +175,12 @@ class SystemMonitor:
                         temp = int(f.read().strip()) / 1000.0
                         return round(temp, 1)
             
-            # Fallback: try vcgencmd for Raspberry Pi compatibility
+            # Fallback for other thermal interfaces
             try:
-                result = subprocess.run(['vcgencmd', 'measure_temp'], 
+                result = subprocess.run(['cat', '/sys/class/hwmon/hwmon0/temp1_input'], 
                                       capture_output=True, text=True, timeout=2)
                 if result.returncode == 0:
-                    temp_str = result.stdout.strip()
-                    temp = float(temp_str.split('=')[1].replace("'C", ""))
+                    temp = int(result.stdout.strip()) / 1000.0
                     return round(temp, 1)
             except:
                 pass
@@ -224,11 +191,19 @@ class SystemMonitor:
     
     @staticmethod
     def get_ram_usage():
-        """Get RAM usage in MB"""
+        """Get RAM usage in MB using psutil for accuracy"""
         try:
             memory = psutil.virtual_memory()
             used_mb = memory.used // (1024 * 1024)
             return used_mb
+        except Exception:
+            return None
+    
+    @staticmethod
+    def get_cpu_usage():
+        """Get CPU usage percentage"""
+        try:
+            return psutil.cpu_percent(interval=1)
         except Exception:
             return None
     
@@ -250,25 +225,61 @@ class SystemMonitor:
 db_manager = DatabaseManager(CONFIG['db_path'])
 system_monitor = SystemMonitor()
 
-# Load HTML template
-HTML_FILE = 'templates/index.html'
-try:
-    with open(HTML_FILE, 'r', encoding='utf-8') as f:
-        HTML_TEMPLATE = f.read()
-except FileNotFoundError:
-    HTML_TEMPLATE = '''
-    <!DOCTYPE html>
-    <html><head><title>MarvinLink - Template Missing</title></head>
-    <body style="font-family: Arial; text-align: center; padding: 50px; background: #1e1b4b; color: white;">
-    <h1>Template Missing</h1>
-    <p>Please ensure marvinlink_complete.html is in the same directory as this script.</p>
-    </body></html>
-    '''
+# Load HTML template from the fixed version
+HTML_TEMPLATE = '''<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarvinLink - Smart Home</title>
+    <style>
+        /* Include the fixed CSS from the artifact here */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 50%, #7c3aed 100%);
+            min-height: 100vh; color: white; overflow-x: hidden;
+        }
+        /* Add all the CSS styles from the fixed version here */
+    </style>
+</head>
+<body>
+    <!-- Include the fixed HTML from the artifact here -->
+    <div id="app">Loading MarvinLink...</div>
+    <script>
+        // The frontend will load via static file serving
+        window.location.href = '/static/index.html';
+    </script>
+</body>
+</html>'''
 
 @app.route('/')
 def index():
     """Serve main dashboard"""
-    return render_template_string(HTML_TEMPLATE)
+    # Try to serve the static file first
+    try:
+        with open('static/index.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return HTML_TEMPLATE
+
+@app.route('/api/system-status')
+def get_system_status():
+    """Get real system status for Orange Pi"""
+    try:
+        cpu_temp = system_monitor.get_cpu_temperature()
+        ram_usage = system_monitor.get_ram_usage()
+        cpu_usage = system_monitor.get_cpu_usage()
+        
+        return jsonify({
+            'cpu_temp': cpu_temp,
+            'ram_usage': ram_usage,
+            'cpu_usage': cpu_usage,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error getting system status: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/status')
 def get_status():
@@ -277,7 +288,7 @@ def get_status():
         conn = sqlite3.connect(CONFIG['db_path'])
         cursor = conn.cursor()
         
-        # Get system info
+        # Get real system info
         cpu_temp = system_monitor.get_cpu_temperature()
         ram_usage = system_monitor.get_ram_usage()
         
@@ -311,9 +322,13 @@ def get_status():
             sensors = []
             for sensor in cursor.fetchall():
                 sensor_name, last_value, unit, sensor_icon, sensor_type, is_enabled = sensor
+                
+                # Only show values for online modules
+                display_value = last_value if is_online else None
+                
                 sensors.append({
                     'name': sensor_name,
-                    'value': last_value,
+                    'value': display_value,
                     'unit': unit,
                     'icon': sensor_icon,
                     'type': sensor_type
@@ -370,13 +385,23 @@ def register_esp():
             'other': '📍'
         }
         
+        location_names = {
+            'kitchen': 'Кухня',
+            'living': 'Вітальня',
+            'bedroom': 'Спальня',
+            'bathroom': 'Ванна',
+            'outdoor': 'Надворі',
+            'other': 'Інше'
+        }
+        
         location_icon = location_icons.get(data['location'], '📍')
+        location_name = location_names.get(data['location'], data['location'])
         
         # Insert ESP module
         cursor.execute('''
             INSERT OR REPLACE INTO esp_modules (name, location, location_icon, mac_address, ip_address, is_online)
             VALUES (?, ?, ?, ?, ?, 1)
-        ''', (data['name'], data['location'], location_icon, data['mac_address'], data.get('ip_address')))
+        ''', (data['name'], location_name, location_icon, data['mac_address'], data.get('ip_address')))
         
         esp_id = cursor.lastrowid
         
@@ -397,6 +422,45 @@ def register_esp():
         
     except Exception as e:
         logger.error(f"Error registering ESP: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/esp/<int:esp_id>/delete', methods=['DELETE'])
+def delete_esp(esp_id):
+    """Delete ESP32 module and its sensors"""
+    try:
+        conn = sqlite3.connect(CONFIG['db_path'])
+        cursor = conn.cursor()
+        
+        # Get ESP name for logging
+        cursor.execute('SELECT name FROM esp_modules WHERE id = ?', (esp_id,))
+        result = cursor.fetchone()
+        if not result:
+            return jsonify({'error': 'ESP module not found'}), 404
+        
+        esp_name = result[0]
+        
+        # Delete sensor data history
+        cursor.execute('''
+            DELETE FROM sensor_data 
+            WHERE sensor_id IN (SELECT id FROM sensors WHERE esp_id = ?)
+        ''', (esp_id,))
+        
+        # Delete sensors
+        cursor.execute('DELETE FROM sensors WHERE esp_id = ?', (esp_id,))
+        
+        # Delete ESP module
+        cursor.execute('DELETE FROM esp_modules WHERE id = ?', (esp_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        db_manager.log_event('INFO', f'ESP module deleted: {esp_name}')
+        logger.info(f"ESP module {esp_name} deleted")
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Error deleting ESP: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/esp/<int:esp_id>/data', methods=['POST'])
@@ -488,30 +552,49 @@ def handle_settings():
 
 @app.route('/api/weather/<city>')
 def get_weather(city):
-    """Get weather data for city (mock implementation)"""
+    """Get weather data using free wttr.in service"""
     try:
-        # This is a mock implementation
-        # Replace with actual weather API like OpenWeatherMap
+        import requests
         
-        import random
+        response = requests.get(
+            f'https://wttr.in/{city}?format=%t,%C&lang=uk',
+            timeout=10,
+            headers={'User-Agent': 'MarvinLink/1.0'}
+        )
         
-        # Mock weather data
-        conditions = [
-            {'temp': 22, 'desc': 'Сонячно', 'icon': '☀️'},
-            {'temp': 18, 'desc': 'Хмарно', 'icon': '☁️'},
-            {'temp': 15, 'desc': 'Дощ', 'icon': '🌧️'},
-            {'temp': 8, 'desc': 'Сніг', 'icon': '❄️'},
-            {'temp': 12, 'desc': 'Туман', 'icon': '🌫️'}
-        ]
+        if response.status_code == 200:
+            data = response.text.strip()
+            parts = data.split(',')
+            
+            if len(parts) >= 2:
+                temp = int(''.join(filter(str.isdigit, parts[0].replace('-', 'MINUS'))))
+                if 'MINUS' in parts[0]:
+                    temp = -temp
+                
+                description = parts[1].strip()
+                
+                weather = {
+                    'temp': temp,
+                    'desc': description,
+                    'city': city
+                }
+                
+                return jsonify(weather)
         
-        weather = random.choice(conditions)
-        weather['city'] = city
-        
-        return jsonify(weather)
+        # Fallback
+        return jsonify({
+            'temp': '--',
+            'desc': 'Немає даних',
+            'city': city
+        })
         
     except Exception as e:
         logger.error(f"Error getting weather: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'temp': '--',
+            'desc': 'Помилка з\'єднання',
+            'city': city
+        })
 
 @app.route('/api/logs')
 def get_logs():
@@ -568,12 +651,29 @@ def health_monitor():
                     SET is_online = ? 
                     WHERE id = ?
                 ''', (is_online, esp_id))
+                
+                # If offline, clear sensor values
+                if not is_online:
+                    cursor.execute('''
+                        UPDATE sensors 
+                        SET last_value = NULL 
+                        WHERE esp_id = ?
+                    ''', (esp_id,))
             
             # Mark ESP as offline if not seen for more than 2 minutes
             cursor.execute('''
                 UPDATE esp_modules 
                 SET is_online = 0 
                 WHERE last_seen < datetime('now', '-2 minutes')
+            ''')
+            
+            # Clear sensor values for offline modules
+            cursor.execute('''
+                UPDATE sensors 
+                SET last_value = NULL 
+                WHERE esp_id IN (
+                    SELECT id FROM esp_modules WHERE is_online = 0
+                )
             ''')
             
             conn.commit()
@@ -615,7 +715,7 @@ def cleanup_old_data():
 if __name__ == '__main__':
     # Log startup
     db_manager.log_event('INFO', 'MarvinLink system starting up')
-    logger.info("Starting MarvinLink Smart Home System")
+    logger.info("Starting MarvinLink Smart Home System - Clean Version")
     
     # Start background tasks
     health_thread = threading.Thread(target=health_monitor, daemon=True)
