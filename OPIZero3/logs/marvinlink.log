@@ -1,0 +1,70 @@
+2025-09-28 16:11:50,212 - __main__ - INFO - Database initialized successfully
+2025-09-28 16:11:50,214 - __main__ - ERROR - Failed to insert demo data: table sensors has no column named esp_id
+2025-09-28 16:11:50,216 - __main__ - INFO - Starting MarvinLink Smart Home System
+2025-09-28 16:12:14,160 - __main__ - INFO - Database initialized successfully
+2025-09-28 16:12:14,161 - __main__ - ERROR - Failed to insert demo data: table sensors has no column named esp_id
+2025-09-28 16:12:14,162 - __main__ - INFO - Starting MarvinLink Smart Home System
+2025-09-28 16:12:15,445 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.9:5000
+2025-09-28 16:12:15,447 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-09-28 16:12:17,809 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 16:12:17] "[33mGET /api/sensors HTTP/1.1[0m" 404 -
+2025-09-28 16:12:18,984 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 16:12:18] "GET / HTTP/1.1" 200 -
+2025-09-28 16:12:22,653 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 16:12:22] "GET / HTTP/1.1" 200 -
+2025-09-28 16:12:23,296 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 16:12:23] "GET / HTTP/1.1" 200 -
+2025-09-28 16:13:04,652 - __main__ - INFO - Database initialized successfully
+2025-09-28 16:13:04,654 - __main__ - ERROR - Failed to insert demo data: table sensors has no column named esp_id
+2025-09-28 16:13:04,655 - __main__ - INFO - Starting MarvinLink Smart Home System
+2025-09-28 16:13:05,939 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.9:5000
+2025-09-28 16:13:05,940 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-09-28 16:13:27,490 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 16:13:27] "GET / HTTP/1.1" 200 -
+2025-09-28 16:13:52,026 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 16:13:52] "GET / HTTP/1.1" 200 -
+2025-09-28 16:13:57,433 - __main__ - INFO - Database initialized successfully
+2025-09-28 16:13:57,434 - __main__ - ERROR - Failed to insert demo data: table sensors has no column named esp_id
+2025-09-28 16:13:57,498 - __main__ - INFO - Starting MarvinLink Smart Home System
+2025-09-28 16:13:58,782 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.9:5000
+2025-09-28 16:13:58,783 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-09-28 16:14:00,043 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 16:14:00] "GET / HTTP/1.1" 200 -
+2025-09-28 16:14:00,092 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 16:14:00] "GET /api/status HTTP/1.1" 200 -
+2025-09-28 16:14:15,084 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 16:14:15] "GET /api/status HTTP/1.1" 200 -
+2025-09-28 16:14:30,377 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 16:14:30] "GET /api/status HTTP/1.1" 200 -
+2025-09-28 16:14:45,666 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 16:14:45] "GET /api/status HTTP/1.1" 200 -
+2025-09-28 16:15:00,797 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 16:15:00] "GET /api/status HTTP/1.1" 200 -
+2025-09-28 16:15:15,930 - __main__ - ERROR - Error getting status: no such table: esp_modules
+2025-09-28 16:15:15,931 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 16:15:15] "[35m[1mGET /api/status HTTP/1.1[0m" 500 -
+2025-09-28 19:22:48,295 - __main__ - INFO - Database initialized successfully
+2025-09-28 19:22:48,299 - __main__ - ERROR - Failed to insert demo data: table sensors has no column named esp_id
+2025-09-28 19:22:56,618 - __main__ - INFO - Database initialized successfully
+2025-09-28 19:22:56,619 - __main__ - ERROR - Failed to insert demo data: table sensors has no column named esp_id
+2025-09-28 19:23:02,127 - __main__ - ERROR - Failed to log event: database is locked
+2025-09-28 19:23:02,127 - __main__ - INFO - Starting MarvinLink Smart Home System
+2025-09-28 19:23:02,128 - __main__ - INFO - Background tasks started
+2025-09-28 19:23:02,143 - __main__ - INFO - Old data cleaned up
+2025-09-28 19:23:03,422 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.9:5000
+2025-09-28 19:23:03,423 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-09-28 19:23:03,561 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:23:03] "GET / HTTP/1.1" 200 -
+2025-09-28 19:30:56,644 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:30:56] "GET / HTTP/1.1" 200 -
+2025-09-28 19:31:03,158 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:31:03] "GET / HTTP/1.1" 200 -
+2025-09-28 19:31:08,516 - __main__ - INFO - Database initialized successfully
+2025-09-28 19:31:08,517 - __main__ - ERROR - Failed to insert demo data: table sensors has no column named esp_id
+2025-09-28 19:31:14,016 - __main__ - ERROR - Failed to log event: database is locked
+2025-09-28 19:31:14,016 - __main__ - INFO - Starting MarvinLink Smart Home System
+2025-09-28 19:31:14,019 - __main__ - INFO - Background tasks started
+2025-09-28 19:31:14,046 - __main__ - INFO - Old data cleaned up
+2025-09-28 19:31:15,291 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.9:5000
+2025-09-28 19:31:15,291 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-09-28 19:31:15,966 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:31:15] "GET / HTTP/1.1" 200 -
+2025-09-28 19:31:16,900 - werkzeug - INFO - 192.168.0.9 - - [28/Sep/2025 19:31:16] "GET / HTTP/1.1" 200 -
