@@ -215,10 +215,39 @@
         @media (max-width: 768px) {
             .container { padding: 16px; }
             .title { font-size: 2em; }
-            .system-info { grid-template-columns: 1fr; }
+            .system-info { 
+                grid-template-columns: repeat(2, 1fr); 
+                gap: 16px;
+            }
             .esp-grid { grid-template-columns: 1fr; }
             .sensors-grid { grid-template-columns: repeat(2, 1fr); }
             .sub-info { grid-template-columns: 1fr; }
+            .nav-tabs {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .nav-tab {
+                padding: 10px 16px;
+                font-size: 0.9em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .system-info { 
+                grid-template-columns: 1fr; 
+                gap: 12px;
+            }
+            .info-card {
+                padding: 16px;
+            }
+            .main-info-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+            .single-value {
+                font-size: 1.8em;
+            }
         }
     </style>
 </head>
@@ -329,6 +358,17 @@
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label">
+                        API ключ OpenWeatherMap 
+                        <a href="https://openweathermap.org/api" target="_blank" style="color: #06d6a0; text-decoration: none; font-size: 0.8em;">(отримати безкоштовно)</a>
+                    </label>
+                    <input type="text" class="form-input" id="weather-api-key" placeholder="Вставте ваш API ключ сюди">
+                    <div style="font-size: 0.8em; opacity: 0.7; margin-top: 4px;">
+                        Без API ключа погода не буде відображатись. Реєстрація безкоштовна.
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label">Часовий пояс</label>
                     <select class="form-select" id="timezone">
                         <option value="Europe/Kiev">Київ (UTC+2/+3)</option>
@@ -406,10 +446,21 @@
         let config = {
             userName: 'Чед',
             weatherCity: 'Київ',
-            timezone: 'Europe/Kiev'
+            timezone: 'Europe/Kiev',
+            weatherApiKey: ''
         };
 
         let espModules = JSON.parse(localStorage.getItem('esp-modules') || '[]');
+
+        // Clear demo data on first load
+        if (!localStorage.getItem('marvinlink-initialized')) {
+            // Clear all demo data completely
+            localStorage.removeItem('esp-modules');
+            localStorage.removeItem('marvinlink-config');
+            espModules = [];
+            localStorage.setItem('esp-modules', '[]');
+            localStorage.setItem('marvinlink-initialized', 'true');
+        }
         let weatherCache = {};
 
         // Load configuration
@@ -419,6 +470,7 @@
                 config = { ...config, ...JSON.parse(saved) };
                 document.getElementById('user-name').value = config.userName;
                 document.getElementById('weather-city-input').value = config.weatherCity;
+                document.getElementById('weather-api-key').value = config.weatherApiKey || '';
                 document.getElementById('timezone').value = config.timezone;
             }
         }
@@ -427,6 +479,7 @@
         function saveSettings() {
             config.userName = document.getElementById('user-name').value || 'Чед';
             config.weatherCity = document.getElementById('weather-city-input').value || 'Київ';
+            config.weatherApiKey = document.getElementById('weather-api-key').value || '';
             config.timezone = document.getElementById('timezone').value;
             
             localStorage.setItem('marvinlink-config', JSON.stringify(config));
@@ -467,9 +520,10 @@
             document.getElementById('current-date').textContent = now.toLocaleDateString('uk-UA', dateOptions);
         }
 
-        // Update weather with OpenWeatherMap API (using stable data)
+        // Update weather with real OpenWeatherMap API
         async function updateWeather() {
             const city = config.weatherCity;
+            const apiKey = config.weatherApiKey;
             const cacheKey = `weather_${city}`;
             const now = Date.now();
             
@@ -480,15 +534,28 @@
                 return;
             }
 
+            if (!apiKey) {
+                displayWeather({
+                    temp: '--',
+                    description: 'Потрібен API ключ',
+                    city: city
+                });
+                return;
+            }
+
             try {
-                // Use a real weather API here - this is a placeholder
-                // For demo, create stable weather based on city name hash
-                const cityHash = city.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-                const baseTemp = 15 + (cityHash % 20); // Stable temperature based on city name
+                const response = await fetch(
+                    `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric&lang=uk`
+                );
                 
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
                 const weather = {
-                    temp: Math.round(baseTemp + Math.sin(Date.now() / 86400000) * 5), // Slight daily variation
-                    description: getWeatherByTemp(baseTemp),
+                    temp: Math.round(data.main.temp),
+                    description: data.weather[0].description || 'Без опису',
                     city: city
                 };
 
@@ -499,14 +566,16 @@
                 };
 
                 displayWeather(weather);
+                addLog('INFO', `Погода оновлена для ${city}: ${weather.temp}°C`);
                 
             } catch (error) {
                 console.error('Weather fetch error:', error);
                 displayWeather({
                     temp: '--',
-                    description: 'Немає даних',
+                    description: 'Помилка API',
                     city: city
                 });
+                addLog('ERROR', `Помилка погоди: ${error.message}`);
             }
         }
 
@@ -543,14 +612,15 @@
         }
 
         function updateSystemInfo() {
-            // Simulate system data
-            const cpuTemp = 45 + Math.random() * 10;
-            const ramUsage = 800 + Math.random() * 400;
+            // Show real system counts, not fake data
+            const activeCount = espModules.filter(esp => esp.online).length;
+            const totalSensors = espModules.reduce((total, esp) => total + esp.sensors.length, 0);
             
-            document.getElementById('cpu-temp').textContent = Math.round(cpuTemp) + '°C';
-            document.getElementById('ram-usage').textContent = Math.round(ramUsage) + 'MB';
-            document.getElementById('active-esp').textContent = espModules.filter(esp => esp.online).length;
-            document.getElementById('total-sensors').textContent = espModules.reduce((total, esp) => total + esp.sensors.length, 0);
+            // CPU and RAM would come from real API in production
+            document.getElementById('cpu-temp').textContent = '--°C';
+            document.getElementById('ram-usage').textContent = '--MB';
+            document.getElementById('active-esp').textContent = activeCount;
+            document.getElementById('total-sensors').textContent = totalSensors;
         }
 
         function renderESPCards() {
