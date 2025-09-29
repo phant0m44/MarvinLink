@@ -7,18 +7,19 @@ import time
 import subprocess
 import psutil
 import requests
-from datetime import datetime, timedelta
-from flask import Flask, jsonify, request, render_template_string
+from datetime import datetime
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
-app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend
+app = Flask(__name__, static_folder='static')
+CORS(app)
 
 # Configure logging
 os.makedirs('logs', exist_ok=True)
+os.makedirs('data', exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler('logs/marvinlink.log'),
         logging.StreamHandler()
@@ -26,12 +27,73 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configuration
-CONFIG = {
-    'db_path': 'marvinlink.db',
-    'host': '0.0.0.0',
-    'port': 5000
-}
+# Configuration paths
+CONFIG_FILE = 'data/config.json'
+SENSORS_FILE = 'data/sensors_data.json'
+DB_PATH = 'marvinlink.db'
+
+# ========== JSON FILE MANAGERS ==========
+
+class ConfigManager:
+    """Manages configuration in JSON file"""
+    
+    @staticmethod
+    def load():
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        else:
+            # Default config
+            default = {
+                'user_name': 'Чед',
+                'weather_city': 'Київ',
+                'timezone': 'Europe/Kiev'
+            }
+            ConfigManager.save(default)
+            return default
+    
+    @staticmethod
+    def save(config):
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+        logger.info("Config saved to file")
+
+class SensorsDataManager:
+    """Manages sensor data in JSON file"""
+    
+    @staticmethod
+    def load():
+        if os.path.exists(SENSORS_FILE):
+            with open(SENSORS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        else:
+            default = {'esp_modules': []}
+            SensorsDataManager.save(default)
+            return default
+    
+    @staticmethod
+    def save(data):
+        with open(SENSORS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    
+    @staticmethod
+    def update_sensor_value(esp_id, sensor_type, value):
+        """Update single sensor value"""
+        data = SensorsDataManager.load()
+        
+        for esp in data['esp_modules']:
+            if esp['id'] == esp_id:
+                for sensor in esp['sensors']:
+                    if sensor['type'] == sensor_type:
+                        sensor['value'] = value
+                        sensor['last_updated'] = datetime.now().isoformat()
+                        break
+                esp['last_seen'] = datetime.now().isoformat()
+                break
+        
+        SensorsDataManager.save(data)
+
+# ========== DATABASE MANAGER ==========
 
 class DatabaseManager:
     def __init__(self, db_path):
@@ -39,112 +101,66 @@ class DatabaseManager:
         self.init_database()
     
     def init_database(self):
-        """Initialize SQLite database with required tables"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # ESP32 modules table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS esp_modules (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    location TEXT NOT NULL,
-                    location_icon TEXT DEFAULT '📍',
-                    ip_address TEXT,
-                    mac_address TEXT UNIQUE,
-                    is_online BOOLEAN DEFAULT 0,
-                    last_seen TIMESTAMP,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            # Sensors table with predefined types
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS sensors (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    esp_id INTEGER,
-                    sensor_type TEXT NOT NULL,
-                    sensor_name TEXT NOT NULL,
-                    unit TEXT NOT NULL,
-                    icon TEXT DEFAULT '📊',
-                    last_value REAL,
-                    last_updated TIMESTAMP,
-                    is_enabled BOOLEAN DEFAULT 1,
-                    FOREIGN KEY (esp_id) REFERENCES esp_modules (id)
-                )
-            ''')
-            
-            # Sensor data history
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS sensor_data (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    sensor_id INTEGER,
-                    value REAL,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (sensor_id) REFERENCES sensors (id)
-                )
-            ''')
-            
-            # System logs
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS system_logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    level TEXT,
-                    message TEXT,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            # System settings
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS settings (
-                    key TEXT PRIMARY KEY,
-                    value TEXT,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            conn.commit()
-            conn.close()
-            logger.info("Database initialized successfully")
-            
-            # DON'T insert demo data - start clean
-            self.check_initial_settings()
-            
-        except Exception as e:
-            logger.error(f"Database initialization failed: {e}")
-    
-    def check_initial_settings(self):
-        """Insert only basic settings, no demo data"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # Insert only default settings if they don't exist
-            cursor.execute('SELECT COUNT(*) FROM settings')
-            if cursor.fetchone()[0] == 0:
-                default_settings = [
-                    ('user_name', 'Чед'),
-                    ('weather_city', 'Київ'),
-                    ('timezone', 'Europe/Kiev'),
-                    ('system_initialized', 'true')
-                ]
-                
-                cursor.executemany('''
-                    INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)
-                ''', default_settings)
-                
-                conn.commit()
-                logger.info("Initial settings inserted")
-            
-            conn.close()
-            
-        except Exception as e:
-            logger.error(f"Failed to insert initial settings: {e}")
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # ESP modules table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS esp_modules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                location TEXT NOT NULL,
+                location_icon TEXT DEFAULT '📍',
+                ip_address TEXT,
+                mac_address TEXT UNIQUE,
+                is_online BOOLEAN DEFAULT 0,
+                last_seen TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Sensors table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sensors (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                esp_id INTEGER,
+                sensor_type TEXT NOT NULL,
+                sensor_name TEXT NOT NULL,
+                unit TEXT NOT NULL,
+                icon TEXT DEFAULT '📊',
+                last_value REAL,
+                last_updated TIMESTAMP,
+                is_enabled BOOLEAN DEFAULT 1,
+                FOREIGN KEY (esp_id) REFERENCES esp_modules (id)
+            )
+        ''')
+        
+        # Sensor data history
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sensor_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sensor_id INTEGER,
+                value REAL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (sensor_id) REFERENCES sensors (id)
+            )
+        ''')
+        
+        # System logs
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS system_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                level TEXT,
+                message TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        conn.commit()
+        conn.close()
+        logger.info("Database initialized")
     
     def log_event(self, level, message):
-        """Log system event"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -157,16 +173,15 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Failed to log event: {e}")
 
+# ========== SYSTEM MONITOR ==========
+
 class SystemMonitor:
     @staticmethod
     def get_cpu_temperature():
-        """Get CPU temperature for Orange Pi Zero 3"""
         try:
-            # Orange Pi Zero 3 specific thermal zones
             temp_paths = [
                 '/sys/class/thermal/thermal_zone0/temp',
                 '/sys/class/thermal/thermal_zone1/temp',
-                '/sys/devices/virtual/thermal/thermal_zone0/temp'
             ]
             
             for path in temp_paths:
@@ -174,107 +189,47 @@ class SystemMonitor:
                     with open(path, 'r') as f:
                         temp = int(f.read().strip()) / 1000.0
                         return round(temp, 1)
-            
-            # Fallback for other thermal interfaces
-            try:
-                result = subprocess.run(['cat', '/sys/class/hwmon/hwmon0/temp1_input'], 
-                                      capture_output=True, text=True, timeout=2)
-                if result.returncode == 0:
-                    temp = int(result.stdout.strip()) / 1000.0
-                    return round(temp, 1)
-            except:
-                pass
-            
             return None
-        except Exception:
+        except:
             return None
     
     @staticmethod
     def get_ram_usage():
-        """Get RAM usage in MB using psutil for accuracy"""
         try:
             memory = psutil.virtual_memory()
-            used_mb = memory.used // (1024 * 1024)
-            return used_mb
-        except Exception:
-            return None
-    
-    @staticmethod
-    def get_cpu_usage():
-        """Get CPU usage percentage"""
-        try:
-            return psutil.cpu_percent(interval=1)
-        except Exception:
+            return memory.used // (1024 * 1024)
+        except:
             return None
     
     @staticmethod
     def ping_host(ip_address):
-        """Check if host is reachable"""
         try:
             result = subprocess.run(
                 ['ping', '-c', '1', '-W', '2', ip_address],
                 capture_output=True,
-                text=True,
                 timeout=5
             )
             return result.returncode == 0
-        except Exception:
+        except:
             return False
 
-# Initialize components
-db_manager = DatabaseManager(CONFIG['db_path'])
+# Initialize
+db_manager = DatabaseManager(DB_PATH)
 system_monitor = SystemMonitor()
 
-# Load HTML template from the fixed version
-HTML_TEMPLATE = '''<!DOCTYPE html>
-<html lang="uk">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MarvinLink - Smart Home</title>
-    <style>
-        /* Include the fixed CSS from the artifact here */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 50%, #7c3aed 100%);
-            min-height: 100vh; color: white; overflow-x: hidden;
-        }
-        /* Add all the CSS styles from the fixed version here */
-    </style>
-</head>
-<body>
-    <!-- Include the fixed HTML from the artifact here -->
-    <div id="app">Loading MarvinLink...</div>
-    <script>
-        // The frontend will load via static file serving
-        window.location.href = '/static/index.html';
-    </script>
-</body>
-</html>'''
+# ========== ROUTES ==========
 
 @app.route('/')
 def index():
-    """Serve main dashboard"""
-    # Try to serve the static file first
-    try:
-        with open('static/index.html', 'r', encoding='utf-8') as f:
-            return f.read()
-    except FileNotFoundError:
-        return HTML_TEMPLATE
+    return send_from_directory('static', 'index.html')
 
 @app.route('/api/system-status')
 def get_system_status():
-    """Get real system status for Orange Pi"""
+    """Real Orange Pi system status"""
     try:
-        cpu_temp = system_monitor.get_cpu_temperature()
-        ram_usage = system_monitor.get_ram_usage()
-        cpu_usage = system_monitor.get_cpu_usage()
-        
         return jsonify({
-            'cpu_temp': cpu_temp,
-            'ram_usage': ram_usage,
-            'cpu_usage': cpu_usage,
+            'cpu_temp': system_monitor.get_cpu_temperature(),
+            'ram_usage': system_monitor.get_ram_usage(),
             'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
@@ -283,69 +238,19 @@ def get_system_status():
 
 @app.route('/api/status')
 def get_status():
-    """Get complete system status"""
+    """Get complete system status from JSON file"""
     try:
-        conn = sqlite3.connect(CONFIG['db_path'])
-        cursor = conn.cursor()
-        
-        # Get real system info
+        # Get system info
         cpu_temp = system_monitor.get_cpu_temperature()
         ram_usage = system_monitor.get_ram_usage()
         
-        # Get ESP modules count
-        cursor.execute('SELECT COUNT(*) FROM esp_modules WHERE is_online = 1')
-        active_esp = cursor.fetchone()[0]
+        # Load sensor data from JSON
+        sensors_data = SensorsDataManager.load()
+        esp_modules = sensors_data.get('esp_modules', [])
         
-        # Get total sensors count
-        cursor.execute('SELECT COUNT(*) FROM sensors WHERE is_enabled = 1')
-        total_sensors = cursor.fetchone()[0]
-        
-        # Get ESP modules with sensors
-        cursor.execute('''
-            SELECT id, name, location, location_icon, ip_address, is_online, last_seen
-            FROM esp_modules
-            ORDER BY is_online DESC, name
-        ''')
-        
-        esp_modules = []
-        for esp in cursor.fetchall():
-            esp_id, name, location, location_icon, ip_address, is_online, last_seen = esp
-            
-            # Get sensors for this ESP
-            cursor.execute('''
-                SELECT sensor_name, last_value, unit, icon, sensor_type, is_enabled
-                FROM sensors
-                WHERE esp_id = ? AND is_enabled = 1
-                ORDER BY sensor_name
-            ''', (esp_id,))
-            
-            sensors = []
-            for sensor in cursor.fetchall():
-                sensor_name, last_value, unit, sensor_icon, sensor_type, is_enabled = sensor
-                
-                # Only show values for online modules
-                display_value = last_value if is_online else None
-                
-                sensors.append({
-                    'name': sensor_name,
-                    'value': display_value,
-                    'unit': unit,
-                    'icon': sensor_icon,
-                    'type': sensor_type
-                })
-            
-            esp_modules.append({
-                'id': esp_id,
-                'name': name,
-                'location': location,
-                'icon': location_icon,
-                'ip_address': ip_address,
-                'online': bool(is_online),
-                'last_seen': last_seen,
-                'sensors': sensors
-            })
-        
-        conn.close()
+        # Count active ESP and sensors
+        active_esp = sum(1 for esp in esp_modules if esp.get('online', False))
+        total_sensors = sum(len(esp.get('sensors', [])) for esp in esp_modules)
         
         return jsonify({
             'system': {
@@ -367,45 +272,37 @@ def register_esp():
     """Register new ESP32 module"""
     try:
         data = request.json
-        required_fields = ['name', 'location', 'mac_address', 'sensors']
+        required = ['name', 'location', 'mac_address', 'sensors']
         
-        if not all(field in data for field in required_fields):
+        if not all(field in data for field in required):
             return jsonify({'error': 'Missing required fields'}), 400
         
-        conn = sqlite3.connect(CONFIG['db_path'])
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Map location to icon
+        # Location mappings
         location_icons = {
-            'kitchen': '🍳',
-            'living': '🛋️',
-            'bedroom': '🛏️',
-            'bathroom': '🚿',
-            'outdoor': '🌤️',
-            'other': '📍'
+            'kitchen': '🍳', 'living': '🛋️', 'bedroom': '🛏️',
+            'bathroom': '🚿', 'outdoor': '🌤️', 'other': '📍'
         }
-        
         location_names = {
-            'kitchen': 'Кухня',
-            'living': 'Вітальня',
-            'bedroom': 'Спальня',
-            'bathroom': 'Ванна',
-            'outdoor': 'Надворі',
-            'other': 'Інше'
+            'kitchen': 'Кухня', 'living': 'Вітальня', 'bedroom': 'Спальня',
+            'bathroom': 'Ванна', 'outdoor': 'Надворі', 'other': 'Інше'
         }
         
-        location_icon = location_icons.get(data['location'], '📍')
-        location_name = location_names.get(data['location'], data['location'])
+        icon = location_icons.get(data['location'], '📍')
+        loc_name = location_names.get(data['location'], data['location'])
         
-        # Insert ESP module
+        # Insert into DB
         cursor.execute('''
-            INSERT OR REPLACE INTO esp_modules (name, location, location_icon, mac_address, ip_address, is_online)
-            VALUES (?, ?, ?, ?, ?, 1)
-        ''', (data['name'], location_name, location_icon, data['mac_address'], data.get('ip_address')))
+            INSERT OR REPLACE INTO esp_modules 
+            (name, location, location_icon, mac_address, ip_address, is_online, last_seen)
+            VALUES (?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+        ''', (data['name'], loc_name, icon, data['mac_address'], data.get('ip_address')))
         
         esp_id = cursor.lastrowid
         
-        # Insert sensors based on predefined template
+        # Insert sensors
         for sensor in data['sensors']:
             cursor.execute('''
                 INSERT INTO sensors (esp_id, sensor_type, sensor_name, unit, icon, is_enabled)
@@ -415,52 +312,47 @@ def register_esp():
         conn.commit()
         conn.close()
         
-        db_manager.log_event('INFO', f'New ESP module registered: {data["name"]}')
-        logger.info(f"ESP module registered: {data}")
+        # Add to JSON file
+        sensors_data = SensorsDataManager.load()
+        
+        new_esp = {
+            'id': esp_id,
+            'name': data['name'],
+            'location': loc_name,
+            'icon': icon,
+            'ip_address': data.get('ip_address'),
+            'mac_address': data['mac_address'],
+            'online': True,
+            'last_seen': datetime.now().isoformat(),
+            'sensors': [
+                {
+                    'name': s['name'],
+                    'type': s['type'],
+                    'unit': s['unit'],
+                    'icon': s.get('icon', '📊'),
+                    'value': None,
+                    'last_updated': None
+                }
+                for s in data['sensors']
+            ]
+        }
+        
+        # Remove old entry with same MAC
+        sensors_data['esp_modules'] = [
+            esp for esp in sensors_data['esp_modules'] 
+            if esp.get('mac_address') != data['mac_address']
+        ]
+        sensors_data['esp_modules'].append(new_esp)
+        
+        SensorsDataManager.save(sensors_data)
+        
+        db_manager.log_event('INFO', f'ESP registered: {data["name"]}')
+        logger.info(f"ESP {data['name']} registered with ID {esp_id}")
         
         return jsonify({'success': True, 'esp_id': esp_id})
         
     except Exception as e:
         logger.error(f"Error registering ESP: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/esp/<int:esp_id>/delete', methods=['DELETE'])
-def delete_esp(esp_id):
-    """Delete ESP32 module and its sensors"""
-    try:
-        conn = sqlite3.connect(CONFIG['db_path'])
-        cursor = conn.cursor()
-        
-        # Get ESP name for logging
-        cursor.execute('SELECT name FROM esp_modules WHERE id = ?', (esp_id,))
-        result = cursor.fetchone()
-        if not result:
-            return jsonify({'error': 'ESP module not found'}), 404
-        
-        esp_name = result[0]
-        
-        # Delete sensor data history
-        cursor.execute('''
-            DELETE FROM sensor_data 
-            WHERE sensor_id IN (SELECT id FROM sensors WHERE esp_id = ?)
-        ''', (esp_id,))
-        
-        # Delete sensors
-        cursor.execute('DELETE FROM sensors WHERE esp_id = ?', (esp_id,))
-        
-        # Delete ESP module
-        cursor.execute('DELETE FROM esp_modules WHERE id = ?', (esp_id,))
-        
-        conn.commit()
-        conn.close()
-        
-        db_manager.log_event('INFO', f'ESP module deleted: {esp_name}')
-        logger.info(f"ESP module {esp_name} deleted")
-        
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        logger.error(f"Error deleting ESP: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/esp/<int:esp_id>/data', methods=['POST'])
@@ -469,17 +361,20 @@ def receive_esp_data(esp_id):
     try:
         data = request.json
         if not data or 'sensors' not in data:
-            return jsonify({'error': 'No sensor data provided'}), 400
+            return jsonify({'error': 'No sensor data'}), 400
         
-        conn = sqlite3.connect(CONFIG['db_path'])
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
         # Verify ESP exists
-        cursor.execute('SELECT id FROM esp_modules WHERE id = ?', (esp_id,))
-        if not cursor.fetchone():
-            return jsonify({'error': 'ESP module not found'}), 404
+        cursor.execute('SELECT id, name FROM esp_modules WHERE id = ?', (esp_id,))
+        result = cursor.fetchone()
+        if not result:
+            return jsonify({'error': 'ESP not found'}), 404
         
-        # Update ESP online status
+        esp_name = result[1]
+        
+        # Update ESP status in DB
         cursor.execute('''
             UPDATE esp_modules 
             SET is_online = 1, last_seen = CURRENT_TIMESTAMP,
@@ -487,9 +382,8 @@ def receive_esp_data(esp_id):
             WHERE id = ?
         ''', (data.get('ip_address'), esp_id))
         
-        # Update sensor values
+        # Update sensor values in DB
         for sensor_type, value in data['sensors'].items():
-            # Update current value
             cursor.execute('''
                 UPDATE sensors 
                 SET last_value = ?, last_updated = CURRENT_TIMESTAMP 
@@ -502,105 +396,92 @@ def receive_esp_data(esp_id):
                 SELECT id, ? FROM sensors 
                 WHERE esp_id = ? AND sensor_type = ?
             ''', (value, esp_id, sensor_type))
-        
-        # Clean old history (keep last 1000 entries per sensor)
-        cursor.execute('''
-            DELETE FROM sensor_data 
-            WHERE id NOT IN (
-                SELECT id FROM sensor_data 
-                WHERE sensor_id IN (SELECT id FROM sensors WHERE esp_id = ?)
-                ORDER BY timestamp DESC 
-                LIMIT 1000
-            )
-        ''', (esp_id,))
+            
+            # Update JSON file
+            SensorsDataManager.update_sensor_value(esp_id, sensor_type, value)
         
         conn.commit()
         conn.close()
         
-        logger.info(f"Data received from ESP {esp_id}: {data}")
+        # Update JSON file ESP status
+        sensors_data = SensorsDataManager.load()
+        for esp in sensors_data['esp_modules']:
+            if esp['id'] == esp_id:
+                esp['online'] = True
+                esp['last_seen'] = datetime.now().isoformat()
+                if data.get('ip_address'):
+                    esp['ip_address'] = data['ip_address']
+                break
+        
+        SensorsDataManager.save(sensors_data)
+        
+        logger.info(f"Data received from {esp_name} (ID: {esp_id})")
         return jsonify({'success': True})
         
     except Exception as e:
-        logger.error(f"Error receiving ESP data: {e}")
+        logger.error(f"Error receiving data: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/esp/<int:esp_id>/delete', methods=['DELETE'])
+def delete_esp(esp_id):
+    """Delete ESP32 module"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT name FROM esp_modules WHERE id = ?', (esp_id,))
+        result = cursor.fetchone()
+        if not result:
+            return jsonify({'error': 'ESP not found'}), 404
+        
+        esp_name = result[0]
+        
+        # Delete from DB
+        cursor.execute('DELETE FROM sensor_data WHERE sensor_id IN (SELECT id FROM sensors WHERE esp_id = ?)', (esp_id,))
+        cursor.execute('DELETE FROM sensors WHERE esp_id = ?', (esp_id,))
+        cursor.execute('DELETE FROM esp_modules WHERE id = ?', (esp_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        # Delete from JSON
+        sensors_data = SensorsDataManager.load()
+        sensors_data['esp_modules'] = [
+            esp for esp in sensors_data['esp_modules'] if esp['id'] != esp_id
+        ]
+        SensorsDataManager.save(sensors_data)
+        
+        db_manager.log_event('INFO', f'ESP deleted: {esp_name}')
+        logger.info(f"ESP {esp_name} deleted")
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Error deleting ESP: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/settings', methods=['GET', 'POST'])
 def handle_settings():
-    """Get or update system settings"""
-    conn = sqlite3.connect(CONFIG['db_path'])
-    cursor = conn.cursor()
-    
+    """Get or update system settings from JSON file"""
     if request.method == 'GET':
-        cursor.execute('SELECT key, value FROM settings')
-        settings = dict(cursor.fetchall())
-        conn.close()
-        return jsonify(settings)
+        config = ConfigManager.load()
+        return jsonify(config)
     
     elif request.method == 'POST':
+        config = ConfigManager.load()
         data = request.json
-        for key, value in data.items():
-            cursor.execute('''
-                INSERT OR REPLACE INTO settings (key, value, updated_at)
-                VALUES (?, ?, CURRENT_TIMESTAMP)
-            ''', (key, value))
         
-        conn.commit()
-        conn.close()
+        config.update(data)
+        ConfigManager.save(config)
         
         db_manager.log_event('INFO', 'Settings updated')
         return jsonify({'success': True})
 
-@app.route('/api/weather/<city>')
-def get_weather(city):
-    """Get weather data using free wttr.in service"""
-    try:
-        import requests
-        
-        response = requests.get(
-            f'https://wttr.in/{city}?format=%t,%C&lang=uk',
-            timeout=10,
-            headers={'User-Agent': 'MarvinLink/1.0'}
-        )
-        
-        if response.status_code == 200:
-            data = response.text.strip()
-            parts = data.split(',')
-            
-            if len(parts) >= 2:
-                temp = int(''.join(filter(str.isdigit, parts[0].replace('-', 'MINUS'))))
-                if 'MINUS' in parts[0]:
-                    temp = -temp
-                
-                description = parts[1].strip()
-                
-                weather = {
-                    'temp': temp,
-                    'desc': description,
-                    'city': city
-                }
-                
-                return jsonify(weather)
-        
-        # Fallback
-        return jsonify({
-            'temp': '--',
-            'desc': 'Немає даних',
-            'city': city
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting weather: {e}")
-        return jsonify({
-            'temp': '--',
-            'desc': 'Помилка з\'єднання',
-            'city': city
-        })
-
 @app.route('/api/logs')
 def get_logs():
-    """Get system logs"""
+    """Get system logs from database"""
     try:
-        conn = sqlite3.connect(CONFIG['db_path'])
+        conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
         cursor.execute('''
@@ -610,14 +491,10 @@ def get_logs():
             LIMIT 100
         ''')
         
-        logs = []
-        for log in cursor.fetchall():
-            level, message, timestamp = log
-            logs.append({
-                'level': level,
-                'message': message,
-                'timestamp': timestamp
-            })
+        logs = [
+            {'level': level, 'message': msg, 'timestamp': ts}
+            for level, msg, ts in cursor.fetchall()
+        ]
         
         conn.close()
         return jsonify({'logs': logs})
@@ -626,114 +503,78 @@ def get_logs():
         logger.error(f"Error getting logs: {e}")
         return jsonify({'error': str(e)}), 500
 
+# ========== BACKGROUND TASKS ==========
+
 def health_monitor():
-    """Background task to monitor ESP health"""
+    """Monitor ESP health and update status"""
     while True:
         try:
-            conn = sqlite3.connect(CONFIG['db_path'])
-            cursor = conn.cursor()
+            sensors_data = SensorsDataManager.load()
             
-            # Get all ESP modules with IP addresses
-            cursor.execute('''
-                SELECT id, ip_address FROM esp_modules 
-                WHERE ip_address IS NOT NULL
-            ''')
+            for esp in sensors_data['esp_modules']:
+                if esp.get('ip_address'):
+                    # Check if reachable
+                    is_online = system_monitor.ping_host(esp['ip_address'])
+                    esp['online'] = is_online
+                    
+                    # Clear sensor values if offline
+                    if not is_online:
+                        for sensor in esp['sensors']:
+                            sensor['value'] = None
+                else:
+                    esp['online'] = False
             
-            esp_modules = cursor.fetchall()
+            # Check last_seen timestamp (2 minutes timeout)
+            now = datetime.now()
+            for esp in sensors_data['esp_modules']:
+                if esp.get('last_seen'):
+                    last_seen = datetime.fromisoformat(esp['last_seen'])
+                    if (now - last_seen).total_seconds() > 120:
+                        esp['online'] = False
+                        for sensor in esp['sensors']:
+                            sensor['value'] = None
             
-            for esp_id, ip_address in esp_modules:
-                # Check if ESP is reachable
-                is_online = system_monitor.ping_host(ip_address)
-                
-                # Update status
-                cursor.execute('''
-                    UPDATE esp_modules 
-                    SET is_online = ? 
-                    WHERE id = ?
-                ''', (is_online, esp_id))
-                
-                # If offline, clear sensor values
-                if not is_online:
-                    cursor.execute('''
-                        UPDATE sensors 
-                        SET last_value = NULL 
-                        WHERE esp_id = ?
-                    ''', (esp_id,))
-            
-            # Mark ESP as offline if not seen for more than 2 minutes
-            cursor.execute('''
-                UPDATE esp_modules 
-                SET is_online = 0 
-                WHERE last_seen < datetime('now', '-2 minutes')
-            ''')
-            
-            # Clear sensor values for offline modules
-            cursor.execute('''
-                UPDATE sensors 
-                SET last_value = NULL 
-                WHERE esp_id IN (
-                    SELECT id FROM esp_modules WHERE is_online = 0
-                )
-            ''')
-            
-            conn.commit()
-            conn.close()
+            SensorsDataManager.save(sensors_data)
             
         except Exception as e:
             logger.error(f"Health monitor error: {e}")
         
-        time.sleep(30)  # Check every 30 seconds
+        time.sleep(30)
 
 def cleanup_old_data():
-    """Clean up old sensor data and logs"""
+    """Clean up old sensor data"""
     while True:
         try:
-            conn = sqlite3.connect(CONFIG['db_path'])
+            conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             
-            # Keep only last 7 days of sensor data
-            cursor.execute('''
-                DELETE FROM sensor_data 
-                WHERE timestamp < datetime('now', '-7 days')
-            ''')
-            
-            # Keep only last 30 days of logs
-            cursor.execute('''
-                DELETE FROM system_logs 
-                WHERE timestamp < datetime('now', '-30 days')
-            ''')
+            cursor.execute("DELETE FROM sensor_data WHERE timestamp < datetime('now', '-7 days')")
+            cursor.execute("DELETE FROM system_logs WHERE timestamp < datetime('now', '-30 days')")
             
             conn.commit()
             conn.close()
-            logger.info("Old data cleaned up")
+            logger.info("Old data cleaned")
             
         except Exception as e:
             logger.error(f"Cleanup error: {e}")
         
-        time.sleep(3600)  # Run every hour
+        time.sleep(3600)
+
+# ========== MAIN ==========
 
 if __name__ == '__main__':
-    # Log startup
-    db_manager.log_event('INFO', 'MarvinLink system starting up')
-    logger.info("Starting MarvinLink Smart Home System - Clean Version")
+    db_manager.log_event('INFO', 'MarvinLink starting (NO SIMULATION)')
+    logger.info("Starting MarvinLink - Real data only")
     
     # Start background tasks
-    health_thread = threading.Thread(target=health_monitor, daemon=True)
-    cleanup_thread = threading.Thread(target=cleanup_old_data, daemon=True)
-    
-    health_thread.start()
-    cleanup_thread.start()
+    threading.Thread(target=health_monitor, daemon=True).start()
+    threading.Thread(target=cleanup_old_data, daemon=True).start()
     
     logger.info("Background tasks started")
     
-    # Start Flask app
+    # Start Flask
     try:
-        app.run(
-            host=CONFIG['host'],
-            port=CONFIG['port'],
-            debug=False,
-            threaded=True
-        )
+        app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
     except Exception as e:
-        logger.error(f"Failed to start Flask app: {e}")
-        db_manager.log_event('ERROR', f'Failed to start Flask app: {e}')
+        logger.error(f"Failed to start: {e}")
+        db_manager.log_event('ERROR', f'Failed to start: {e}')

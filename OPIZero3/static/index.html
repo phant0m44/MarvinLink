@@ -444,40 +444,50 @@
             timezone: 'Europe/Kiev'
         };
 
-        let espModules = JSON.parse(localStorage.getItem('esp-modules') || '[]');
-
-        // Clear demo data on first load
-        if (!localStorage.getItem('marvinlink-initialized')) {
-            // Clear all demo data completely
-            localStorage.removeItem('esp-modules');
-            localStorage.removeItem('marvinlink-config');
-            espModules = [];
-            localStorage.setItem('esp-modules', '[]');
-            localStorage.setItem('marvinlink-initialized', 'true');
-        }
-        let weatherCache = {};
-
-        // Load configuration
-        function loadConfig() {
-            const saved = localStorage.getItem('marvinlink-config');
-            if (saved) {
-                config = { ...config, ...JSON.parse(saved) };
-                document.getElementById('user-name').value = config.userName;
-                document.getElementById('weather-city-input').value = config.weatherCity;
-                document.getElementById('timezone').value = config.timezone;
+        // Load config from server, not localStorage
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/settings');
+                if (response.ok) {
+                    const serverConfig = await response.json();
+                    config.userName = serverConfig.user_name || 'Чед';
+                    config.weatherCity = serverConfig.weather_city || 'Київ';
+                    config.timezone = serverConfig.timezone || 'Europe/Kiev';
+                    
+                    document.getElementById('user-name').value = config.userName;
+                    document.getElementById('weather-city-input').value = config.weatherCity;
+                    document.getElementById('timezone').value = config.timezone;
+                }
+            } catch (error) {
+                console.error('Error loading config:', error);
             }
         }
 
-        // Save configuration
-        function saveSettings() {
+        // Save configuration to server
+        async function saveSettings() {
             config.userName = document.getElementById('user-name').value || 'Чед';
             config.weatherCity = document.getElementById('weather-city-input').value || 'Київ';
             config.timezone = document.getElementById('timezone').value;
             
-            localStorage.setItem('marvinlink-config', JSON.stringify(config));
-            updateGreeting();
-            updateWeather();
-            addLog('INFO', 'Налаштування збережено');
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_name: config.userName,
+                        weather_city: config.weatherCity,
+                        timezone: config.timezone
+                    })
+                });
+                
+                if (response.ok) {
+                    updateGreeting();
+                    updateWeather();
+                    addLog('INFO', 'Налаштування збережено на сервері');
+                }
+            } catch (error) {
+                addLog('ERROR', 'Помилка збереження: ' + error.message);
+            }
         }
 
         // Update greeting based on time
