@@ -548,7 +548,7 @@ if __name__ == '__main__':
     logger.info("Background tasks started")
     
     try:
-        app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+        app.run(host='0.0.0.0', port=80, debug=False, threaded=True)
     except Exception as e:
         logger.error(f"Failed to start: {e}")
         db_manager.log_event('ERROR', f'Failed to start: {e}')
