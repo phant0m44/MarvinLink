@@ -7,28 +7,16 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    min-height: 100vh;
-    color: white;
-    overflow-x: hidden;
-
-    /* Фон-картинка */
-    background: url("static/bg.png") no-repeat center center fixed;
-    background-size: cover;
-    position: relative;
-}
-
-body::before {
-    content: "";
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: linear-gradient(135deg, rgba(30,27,75,0.6), rgba(124,58,237,0.25));
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    z-index: -1;
-}
-
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 50%, #7c3aed 100%);
+            min-height: 100vh; color: white; overflow-x: hidden;
+        }
+        .background {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                             radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.15) 0%, transparent 50%);
+            z-index: -1;
+        }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .header { text-align: center; margin-bottom: 40px; }
         .logo {
@@ -766,6 +754,33 @@ body::before {
             const ipAddress = document.getElementById('esp-ip').value;
             
             try {
+                // Спочатку отримуємо список датчиків від ESP32
+                const checkResponse = await fetch('/api/esp/info/' + ipAddress);
+                
+                let sensors = [];
+                
+                if (checkResponse.ok) {
+                    // ESP вже зареєстрований, використовуємо його датчики
+                    const espData = await checkResponse.json();
+                    sensors = espData.sensors || [];
+                } else {
+                    // ESP не зареєстрований, використовуємо стандартні датчики для DHT11
+                    sensors = [
+                        {
+                            name: "Температура",
+                            type: "temperature",
+                            unit: "°C",
+                            icon: "🌡️"
+                        },
+                        {
+                            name: "Вологість",
+                            type: "humidity",
+                            unit: "%",
+                            icon: "💧"
+                        }
+                    ];
+                }
+                
                 const response = await fetch('/api/esp/register', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -773,7 +788,7 @@ body::before {
                         name,
                         location,
                         ip_address: ipAddress,
-                        sensors: []
+                        sensors: sensors
                     })
                 });
                 
@@ -781,14 +796,14 @@ body::before {
                     closeESP32Modal();
                     updateSystemInfo();
                     addLog('INFO', `Модуль "${name}" додано`);
-                    alert('Модуль додано успішно! ESP32 може надсилати дані.');
+                    alert('Модуль додано успішно! Датчики: ' + sensors.map(s => s.name).join(', '));
                 } else {
                     const error = await response.json();
                     alert(`Помилка: ${error.error || 'Невідома помилка'}`);
                 }
             } catch (error) {
                 console.error('Error adding ESP:', error);
-                alert('Помилка додавання модуля');
+                alert('Помилка додавання модуля. Перевірте IP адресу.');
             }
         });
 
@@ -810,7 +825,7 @@ body::before {
             setInterval(updateTime, 60000);
             setInterval(updateGreeting, 60000);
             setInterval(updateWeather, 120000);
-            setInterval(updateSystemInfo, 10000);
+            setInterval(updateSystemInfo, 5000);
         });
     </script>
 </body>
