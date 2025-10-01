@@ -316,21 +316,20 @@ def register_esp():
                 break
         
         if existing_esp:
-            # Update existing
-            existing_esp['name'] = data['name']
-            existing_esp['location'] = data['location']
-            existing_esp['icon'] = icon
-            existing_esp['sensors'] = [
-                {
-                    'name': s['name'],
-                    'type': s['type'],
-                    'unit': s['unit'],
-                    'icon': s.get('icon', '📊'),
-                    'value': None,
-                    'last_updated': None
-                }
-                for s in data['sensors']
-            ]
+            # Update existing - ЗБЕРІГАЄМО назву та локацію!
+            # Оновлюємо тільки датчики, якщо вони змінились
+            if len(data['sensors']) > 0:
+                existing_esp['sensors'] = [
+                    {
+                        'name': s['name'],
+                        'type': s['type'],
+                        'unit': s['unit'],
+                        'icon': s.get('icon', '📊'),
+                        'value': existing_esp['sensors'][i].get('value') if i < len(existing_esp['sensors']) else None,
+                        'last_updated': existing_esp['sensors'][i].get('last_updated') if i < len(existing_esp['sensors']) else None
+                    }
+                    for i, s in enumerate(data['sensors'])
+                ]
             esp_id = existing_esp.get('id', len(sensors_data['esp_modules']))
         else:
             # Create new
@@ -548,7 +547,7 @@ if __name__ == '__main__':
     logger.info("Background tasks started")
     
     try:
-        app.run(host='0.0.0.0', port=80, debug=False, threaded=True)
+        app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
     except Exception as e:
         logger.error(f"Failed to start: {e}")
         db_manager.log_event('ERROR', f'Failed to start: {e}')
