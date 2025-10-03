@@ -78,7 +78,7 @@ class SensorsDataManager:
     
     @staticmethod
     def update_module_data(ip_address, sensor_data):
-        """Update sensor values for a module by IP"""
+        """Update sensor values for a module by IP. If new sensor types appear, add them."""
         data = SensorsDataManager.load()
         
         for esp in data['esp_modules']:
@@ -86,11 +86,36 @@ class SensorsDataManager:
                 esp['online'] = True
                 esp['last_seen'] = datetime.now().isoformat()
                 
-                for sensor in esp['sensors']:
-                    sensor_type = sensor['type']
-                    if sensor_type in sensor_data:
-                        sensor['value'] = sensor_data[sensor_type]
-                        sensor['last_updated'] = datetime.now().isoformat()
+                # Build quick index of existing sensors by type
+                existing_by_type = {s.get('type'): s for s in esp.get('sensors', [])}
+
+                # Known metadata for common sensors
+                defaults = {
+                    'temperature': {'name': 'Температура', 'unit': '°C', 'icon': '🌡️'},
+                    'humidity': {'name': 'Вологість', 'unit': '%', 'icon': '💧'},
+                    'pressure': {'name': 'Тиск', 'unit': 'hPa', 'icon': '📊'},
+                    'light': {'name': 'Освітлення', 'unit': 'lx', 'icon': '💡'},
+                    'relay': {'name': 'Реле', 'unit': '', 'icon': '⚡', 'control': {'type': 'toggle', 'endpoint': '/relay', 'method': 'GET', 'value_field': 'state'}},
+                }
+
+                # Update existing and add missing
+                for s_type, s_value in sensor_data.items():
+                    if s_type in existing_by_type:
+                        existing_by_type[s_type]['value'] = s_value
+                        existing_by_type[s_type]['last_updated'] = datetime.now().isoformat()
+                    else:
+                        meta = defaults.get(s_type, {'name': s_type, 'unit': '', 'icon': '📊'})
+                        new_sensor = {
+                            'name': meta.get('name', s_type),
+                            'type': s_type,
+                            'unit': meta.get('unit', ''),
+                            'icon': meta.get('icon', '📊'),
+                            'value': s_value,
+                            'last_updated': datetime.now().isoformat()
+                        }
+                        if 'control' in meta:
+                            new_sensor['control'] = meta['control']
+                        esp.setdefault('sensors', []).append(new_sensor)
                 
                 SensorsDataManager.save(data)
                 return True
@@ -268,16 +293,26 @@ def discover_esp():
 
 @app.route('/api/esp/info/<ip_address>')
 def get_esp_info(ip_address):
-    """Get ESP module info by IP (ESP should provide this)"""
+    """Get ESP module info by IP.
+    Tries to fetch live from device at http://<ip>/info, falls back to cached registry.
+    """
     try:
-        # This would query the ESP device directly
-        # For now, return error if not found
+        # Try live fetch from device
+        try:
+            url = f"http://{ip_address}/info"
+            with urllib.request.urlopen(url, timeout=3) as resp:
+                raw = resp.read().decode('utf-8', errors='ignore')
+                payload = json.loads(raw)
+                return jsonify(payload)
+        except Exception:
+            pass
+
+        # Fallback to local cache
         sensors_data = SensorsDataManager.load()
-        
         for esp in sensors_data['esp_modules']:
             if esp.get('ip_address') == ip_address:
                 return jsonify(esp)
-        
+
         return jsonify({'error': 'ESP not found'}), 404
         
     except Exception as e:
