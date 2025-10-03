@@ -101,8 +101,13 @@ class SensorsDataManager:
                 # Update existing and add missing
                 for s_type, s_value in sensor_data.items():
                     if s_type in existing_by_type:
-                        existing_by_type[s_type]['value'] = s_value
-                        existing_by_type[s_type]['last_updated'] = datetime.now().isoformat()
+                        sensor_ref = existing_by_type[s_type]
+                        sensor_ref['value'] = s_value
+                        sensor_ref['last_updated'] = datetime.now().isoformat()
+                        # Backfill control metadata if missing and known
+                        meta = defaults.get(s_type)
+                        if meta and 'control' in meta and 'control' not in sensor_ref:
+                            sensor_ref['control'] = meta['control']
                     else:
                         meta = defaults.get(s_type, {'name': s_type, 'unit': '', 'icon': '📊'})
                         new_sensor = {
