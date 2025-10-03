@@ -162,6 +162,7 @@ body::before {
         .sensor-value.ok { color: #10b981; }
         .sensor-value.error { color: #ef4444; }
         .sensor-label { opacity: 0.7; font-size: 0.8em; }
+        .sensor .toggle-btn { margin-top: 8px; width: 100%; padding: 10px 16px; }
 
         .modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -643,11 +644,14 @@ body::before {
                         if (control && control.type === 'toggle') {
                             const isOn = (sensor.value === 1 || sensor.value === true) && esp.online;
                             const nextState = isOn ? 0 : 1;
+                            const btnClass = isOn ? 'btn-secondary' : 'btn-primary';
+                            const btnText = isOn ? 'Вимкнути' : 'Увімкнути';
                             sensorsHtml += `
-                                <div class="sensor clickable" title="Клік для перемикання" onclick="execControl('${esp.ip_address}', '${control.endpoint}', '${control.method || 'GET'}', '${sensor.type}', '${control.value_field || 'value'}', ${nextState})">
+                                <div class="sensor">
                                     <div class="sensor-icon">${sensor.icon || '⚙️'}</div>
                                     <div class="sensor-value ${isOn ? 'ok' : 'error'}">${isOn ? 'ON' : 'OFF'}</div>
                                     <div class="sensor-label">${sensor.name || sensor.type}</div>
+                                    <button class="btn ${btnClass} toggle-btn" onclick="execControl('${esp.ip_address}', '${control.endpoint}', '${control.method || 'GET'}', '${sensor.type}', '${control.value_field || 'value'}', ${nextState})">${btnText}</button>
                                 </div>
                             `;
                         } else {
