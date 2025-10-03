@@ -6,6 +6,8 @@ import threading
 import time
 import subprocess
 import psutil
+import urllib.request
+import urllib.parse
 from datetime import datetime
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -95,8 +97,6 @@ class SensorsDataManager:
         
         return False
 
-# ========== DATABASE MANAGER ==========
-
 class DatabaseManager:
     def __init__(self, db_path):
         self.db_path = db_path
@@ -106,7 +106,7 @@ class DatabaseManager:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        # ESP modules table
+        # ESP modules
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS esp_modules (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -120,7 +120,7 @@ class DatabaseManager:
             )
         ''')
         
-        # Sensors table
+        # Sensors
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS sensors (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -135,7 +135,7 @@ class DatabaseManager:
             )
         ''')
         
-        # System logs
+        # logs
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS system_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -161,8 +161,6 @@ class DatabaseManager:
             conn.close()
         except Exception as e:
             logger.error(f"Failed to log event: {e}")
-
-# ========== SYSTEM MONITOR ==========
 
 class SystemMonitor:
     @staticmethod
@@ -202,11 +200,9 @@ class SystemMonitor:
         except:
             return False
 
-# Initialize
+# Init
 db_manager = DatabaseManager(DB_PATH)
 system_monitor = SystemMonitor()
-
-# ========== ROUTES ==========
 
 @app.route('/')
 def index():
@@ -316,8 +312,6 @@ def register_esp():
                 break
         
         if existing_esp:
-            # Update existing - ЗБЕРІГАЄМО назву та локацію!
-            # Оновлюємо тільки датчики, якщо вони змінились
             if len(data['sensors']) > 0:
                 existing_esp['sensors'] = [
                     {
@@ -489,7 +483,70 @@ def get_logs():
         logger.error(f"Error getting logs: {e}")
         return jsonify({'error': str(e)}), 500
 
-# ========== BACKGROUND TASKS ==========
+@app.route('/api/esp/exec/<ip_address>', methods=['POST'])
+def exec_on_esp(ip_address):
+    """Generic proxy to execute a command against an ESP endpoint.
+    Body: { "path": "/relay", "method": "GET"|"POST", "query": {..}, "body": {..}, "sensor_type": "relay", "value_field": "state" }
+    Updates cached sensor value if sensor_type and value_field provided.
+    """
+    try:
+        data = request.json or {}
+        path = data.get('path') or '/'
+        method = (data.get('method') or 'GET').upper()
+        query = data.get('query') or {}
+        body = data.get('body') or None
+        sensor_type = data.get('sensor_type')
+        value_field = data.get('value_field')
+
+        qs = urllib.parse.urlencode(query)
+        url = f"http://{ip_address}{path}{'?' + qs if qs else ''}"
+
+        if method == 'GET':
+            req = urllib.request.Request(url, method='GET')
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                resp_data = resp.read().decode('utf-8', errors='ignore')
+        else:
+            payload = json.dumps(body or {}).encode('utf-8')
+            req = urllib.request.Request(url, data=payload, method='POST', headers={'Content-Type': 'application/json'})
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                resp_data = resp.read().decode('utf-8', errors='ignore')
+
+        # Try parse response as JSON
+        parsed = None
+        try:
+            parsed = json.loads(resp_data) if resp_data else None
+        except:
+            parsed = None
+
+        # Optional state update
+        if sensor_type and value_field is not None:
+            sensors_data = SensorsDataManager.load()
+            for esp in sensors_data.get('esp_modules', []):
+                if esp.get('ip_address') == ip_address:
+                    esp['online'] = True
+                    esp['last_seen'] = datetime.now().isoformat()
+                    for sensor in esp.get('sensors', []):
+                        if sensor.get('type') == sensor_type:
+                            # Prefer value from response JSON if present, else echo query/body field
+                            new_val = None
+                            if parsed and isinstance(parsed, dict) and value_field in parsed:
+                                new_val = parsed.get(value_field)
+                            elif isinstance(query, dict) and value_field in query:
+                                new_val = query.get(value_field)
+                            elif isinstance(body, dict) and value_field in body:
+                                new_val = body.get(value_field)
+                            sensor['value'] = new_val
+                            sensor['last_updated'] = datetime.now().isoformat()
+                    break
+            SensorsDataManager.save(sensors_data)
+
+        db_manager.log_event('INFO', f'Executed {method} {path} on {ip_address}')
+        return jsonify({'success': True, 'response': parsed if parsed is not None else resp_data})
+    except Exception as e:
+        logger.error(f"Error exec on ESP: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Bg tasks
 
 def health_monitor():
     """Monitor ESP health"""
@@ -534,8 +591,7 @@ def cleanup_old_data():
         
         time.sleep(86400)  # Once per day
 
-# ========== MAIN ==========
-
+# Main
 if __name__ == '__main__':
     db_manager.log_event('INFO', 'MarvinLink starting')
     logger.info("Starting MarvinLink")
@@ -547,7 +603,7 @@ if __name__ == '__main__':
     logger.info("Background tasks started")
     
     try:
-        app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+        app.run(host='0.0.0.0', port=80, debug=False, threaded=True)
     except Exception as e:
         logger.error(f"Failed to start: {e}")
         db_manager.log_event('ERROR', f'Failed to start: {e}')

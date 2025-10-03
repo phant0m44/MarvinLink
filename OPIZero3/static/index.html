@@ -637,17 +637,32 @@ body::before {
                 let sensorsHtml = '';
                 if (esp.sensors && esp.sensors.length > 0) {
                     esp.sensors.forEach(sensor => {
-                        const hasValue = sensor.value !== null && sensor.value !== undefined && esp.online;
-                        const valueClass = hasValue ? 'ok' : 'error';
-                        const displayValue = hasValue ? sensor.value + sensor.unit : 'n/a';
-                        
-                        sensorsHtml += `
-                            <div class="sensor">
-                                <div class="sensor-icon">${sensor.icon}</div>
-                                <div class="sensor-value ${valueClass}">${displayValue}</div>
-                                <div class="sensor-label">${sensor.name}</div>
-                            </div>
-                        `;
+                        const control = sensor.control; // e.g., { type: 'toggle', endpoint: '/relay', value_field: 'state' }
+                        if (control && control.type === 'toggle') {
+                            const isOn = (sensor.value === 1 || sensor.value === true) && esp.online;
+                            const btnLabel = isOn ? 'Вимкнути' : 'Увімкнути';
+                            const btnClass = isOn ? 'btn-secondary' : 'btn-primary';
+                            sensorsHtml += `
+                                <div class="sensor">
+                                    <div class="sensor-icon">${sensor.icon || '⚙️'}</div>
+                                    <div class="sensor-value ${isOn ? 'ok' : 'error'}">${isOn ? 'ON' : 'OFF'}</div>
+                                    <div class="sensor-label">${sensor.name || sensor.type}</div>
+                                    <button class="btn ${btnClass}" onclick="execControl('${esp.ip_address}', '${control.endpoint}', '${control.method || 'GET'}', '${sensor.type}', '${control.value_field || 'value'}', ${isOn ? 0 : 1})">${btnLabel}</button>
+                                </div>
+                            `;
+                        } else {
+                            const hasValue = sensor.value !== null && sensor.value !== undefined && esp.online;
+                            const valueClass = hasValue ? 'ok' : 'error';
+                            const unit = sensor.unit || '';
+                            const displayValue = hasValue ? sensor.value + unit : 'n/a';
+                            sensorsHtml += `
+                                <div class="sensor">
+                                    <div class="sensor-icon">${sensor.icon}</div>
+                                    <div class="sensor-value ${valueClass}">${displayValue}</div>
+                                    <div class="sensor-label">${sensor.name}</div>
+                                </div>
+                            `;
+                        }
                     });
                 }
 
@@ -673,6 +688,36 @@ body::before {
                 
                 container.appendChild(card);
             });
+        }
+
+        async function execControl(ipAddress, endpoint, method, sensorType, valueField, nextState) {
+            try {
+                const isGet = (method || 'GET').toUpperCase() === 'GET';
+                const payload = {
+                    path: endpoint,
+                    method: method || 'GET',
+                    sensor_type: sensorType,
+                    value_field: valueField
+                };
+                if (isGet) payload.query = { [valueField]: nextState };
+                else payload.body = { [valueField]: nextState };
+
+                const response = await fetch(`/api/esp/exec/${ipAddress}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) {
+                    updateSystemInfo();
+                    addLog('INFO', `Команда виконана для ${ipAddress}`);
+                } else {
+                    const err = await response.json();
+                    alert('Помилка керування: ' + (err.error || 'невідома'));
+                }
+            } catch (e) {
+                console.error('execControl error', e);
+                alert('Помилка з\'єднання з ESP');
+            }
         }
 
         async function deleteESP(espId) {
@@ -775,21 +820,7 @@ body::before {
                     const espData = await checkResponse.json();
                     sensors = espData.sensors || [];
                 } else {
-                    // ESP не зареєстрований, використовуємо стандартні датчики для DHT11
-                    sensors = [
-                        {
-                            name: "Температура",
-                            type: "temperature",
-                            unit: "°C",
-                            icon: "🌡️"
-                        },
-                        {
-                            name: "Вологість",
-                            type: "humidity",
-                            unit: "%",
-                            icon: "💧"
-                        }
-                    ];
+                    sensors = [];
                 }
                 
                 const response = await fetch('/api/esp/register', {
