@@ -673,6 +673,7 @@ body::before {
                 card.innerHTML = `
                     <div class="esp-actions">
                         <button class="esp-action-btn" onclick="editESP(${esp.id})">✏️</button>
+                        <button class="esp-action-btn" title="Оновити сенсори" onclick="refreshSensors('${esp.ip_address}', ${esp.id})">↻</button>
                         <button class="esp-action-btn delete" onclick="deleteESP(${esp.id})">×</button>
                     </div>
                     <div class="esp-header">
@@ -721,6 +722,35 @@ body::before {
             } catch (e) {
                 console.error('execControl error', e);
                 alert('Помилка з\'єднання з ESP');
+            }
+        }
+
+        async function refreshSensors(ipAddress, espId) {
+            try {
+                const infoResp = await fetch('/api/esp/info/' + ipAddress);
+                if (!infoResp.ok) {
+                    alert('Не вдалося отримати сенсори з ESP');
+                    return;
+                }
+                const info = await infoResp.json();
+                const sensors = info.sensors || [];
+                // merge into registry via register
+                const statusResp = await fetch('/api/esp/' + espId, {
+                    method: 'PUT',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({})
+                });
+                // re-register with sensors to update sensors list
+                const regResp = await fetch('/api/esp/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name: info.name || 'ESP', location: info.location || 'other', ip_address: ipAddress, sensors })
+                });
+                if (regResp.ok) {
+                    updateSystemInfo();
+                }
+            } catch (e) {
+                console.error('refreshSensors error', e);
             }
         }
 
