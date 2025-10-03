@@ -154,6 +154,8 @@ body::before {
             background: rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 16px;
             text-align: center; transition: all 0.2s ease;
         }
+        .sensor.clickable { cursor: pointer; }
+        .sensor.clickable:active { transform: translateY(0); filter: brightness(0.95); }
         .sensor:hover { background: rgba(255, 255, 255, 0.15); transform: translateY(-2px); }
         .sensor-icon { font-size: 24px; margin-bottom: 8px; }
         .sensor-value { font-size: 1.2em; font-weight: 600; margin-bottom: 4px; }
@@ -640,14 +642,12 @@ body::before {
                         const control = sensor.control; // e.g., { type: 'toggle', endpoint: '/relay', value_field: 'state' }
                         if (control && control.type === 'toggle') {
                             const isOn = (sensor.value === 1 || sensor.value === true) && esp.online;
-                            const btnLabel = isOn ? 'Вимкнути' : 'Увімкнути';
-                            const btnClass = isOn ? 'btn-secondary' : 'btn-primary';
+                            const nextState = isOn ? 0 : 1;
                             sensorsHtml += `
-                                <div class="sensor">
+                                <div class="sensor clickable" title="Клік для перемикання" onclick="execControl('${esp.ip_address}', '${control.endpoint}', '${control.method || 'GET'}', '${sensor.type}', '${control.value_field || 'value'}', ${nextState})">
                                     <div class="sensor-icon">${sensor.icon || '⚙️'}</div>
                                     <div class="sensor-value ${isOn ? 'ok' : 'error'}">${isOn ? 'ON' : 'OFF'}</div>
                                     <div class="sensor-label">${sensor.name || sensor.type}</div>
-                                    <button class="btn ${btnClass}" onclick="execControl('${esp.ip_address}', '${control.endpoint}', '${control.method || 'GET'}', '${sensor.type}', '${control.value_field || 'value'}', ${isOn ? 0 : 1})">${btnLabel}</button>
                                 </div>
                             `;
                         } else {
