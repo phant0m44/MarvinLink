@@ -3,7 +3,8 @@
 MarvinLink is an open-source smart home platform centered around Orange Pi Zero 3 with a built‑in web UI and Python backend. ESP32 nodes are used as lightweight sensor/relay prototypes that report data to the Orange Pi server. The system is designed to be flexible and customizable so anyone can create their own smart home without being limited by commercial solutions.
 
 ---
-
+# ❗IMPORTANT: We have temporarily closed main files for Orange pi to view and edit.
+---
 ## Features ✨
 
 - Orange Pi Zero 3 based server with modern web dashboard
