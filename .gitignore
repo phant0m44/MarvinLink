@@ -1,0 +1,13 @@
+# Ignore important temporary closed files
+OPIZero3/app.py
+OPIZero3/static/index.html
+OPIZero3/main.py
+###
+
+OPIZero3/access_WakeWord.txt
+ESPSHomeProject.code-workspace
+okay-marvin_en_raspberry-pi_v3_0_0.ppn
+OPIZero3/logs
+OPIZero3/data
+uk_UA-ukrainian_tts-medium.onnx
+OPIZero3/marvinlink.db

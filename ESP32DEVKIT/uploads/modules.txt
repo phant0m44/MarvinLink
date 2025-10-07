@@ -1,0 +1,2 @@
+temp_kitchen: 21.5; temp_outside: nan; localtime: 20:48; Led1_pin: 12;
+ (To power on led type: {Led1_on}, and to power off led type: {Led1_off}. ALWAYS use curly braces!!!.)
