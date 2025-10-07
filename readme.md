@@ -93,6 +93,8 @@ pio run --target upload
 
 ## MarvinLink Roadmap 🛠️
 
+![alt text](https://github.com/phant0m44/MarvinLink/blob/main/for_readme.md/MarvinLink.png?raw=true)
+---
 ### ✅ Completed
 - Orange Pi Zero 3 backend (`OPIZero3/app.py`) with REST API, JSON/SQLite storage, background tasks
 - Modern web dashboard (`OPIZero3/static/`) with modules, sensors, settings, logs
