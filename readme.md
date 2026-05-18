@@ -4,7 +4,7 @@
 
 <!--
 <p align="center">
-  <img src="https://github.com/phant0m44/MarvinLink-dev/blob/main/for_readme.md/MarvinLink.png?raw=true" alt="MarvinLink Logo" width="200"/>
+  <img src="https://github.com/phant0m44/MarvinLink/blob/main/for_readme.md/MarvinLink.png?raw=true" alt="MarvinLink Logo" width="200"/>
 </p>
 
 <h1 align="center">MarvinLink 🏠</h1>
@@ -44,7 +44,7 @@ The system runs on an **Orange Pi Zero 3** as the central hub, with **ESP32/ESP3
 > **"Okay Marvin, turn on the light"** - and it just works (sometimes).
 
 <p align="center">
-  <img src="https://github.com/phant0m44/MarvinLink-dev/blob/main/for_readme.md/dashboard_img.jpg?raw=true" alt="MarvinLink Dashboard" width="100%"/>
+  <img src="https://github.com/phant0m44/MarvinLink/blob/main/for_readme.md/dashboard_img.jpg?raw=true" alt="MarvinLink Dashboard" width="100%"/>
 </p>
 
 ---
@@ -107,9 +107,9 @@ The system runs on an **Orange Pi Zero 3** as the central hub, with **ESP32/ESP3
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="https://github.com/phant0m44/MarvinLink-dev/blob/main/for_readme.md/settings_img.jpg?raw=true" alt="Settings" width="48%"/>
+  <img src="https://github.com/phant0m44/MarvinLink/blob/main/for_readme.md/settings_img.jpg?raw=true" alt="Settings" width="48%"/>
   &nbsp;
-  <img src="https://github.com/phant0m44/MarvinLink-dev/blob/main/for_readme.md/fastfetch.jpg?raw=true" alt="Server fastfetch" width="48%"/>
+  <img src="https://github.com/phant0m44/MarvinLink/blob/main/for_readme.md/fastfetch.jpg?raw=true" alt="Server fastfetch" width="48%"/>
 </p>
 
 ---
@@ -117,7 +117,7 @@ The system runs on an **Orange Pi Zero 3** as the central hub, with **ESP32/ESP3
 ## 🏗️ Architecture
 
 <p align="center">
-  <img src="https://github.com/phant0m44/MarvinLink-dev/blob/main/for_readme.md/architecture.jpg?raw=true" alt="MarvinLink Architecture" width="700"/>
+  <img src="https://github.com/phant0m44/MarvinLink/blob/main/for_readme.md/architecture.jpg?raw=true" alt="MarvinLink Architecture" width="700"/>
 </p>
 
 ### Project Structure
@@ -280,7 +280,7 @@ For any commercial use or licensing inquiries, please contact the author directl
 
 ## 🗺️ Roadmap
 
-![Roadmap](https://github.com/phant0m44/MarvinLink-dev/blob/main/for_readme.md/MarvinLinkRoadmap.png?raw=true)
+![Roadmap](https://github.com/phant0m44/MarvinLink/blob/main/for_readme.md/MarvinLinkRoadmap.png?raw=true)
 
 ### ✅ Completed
 - Orange Pi Zero 3 backend with Flask REST API, SQLite, JSON persistence
