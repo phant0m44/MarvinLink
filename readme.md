@@ -34,7 +34,7 @@
 </p>
 
 ---
-
+>‼️ **Important:** We have temporarily moved the development to a private repository
 ## 🔮 What is MarvinLink?
 
 MarvinLink is a fully self-hosted smart home system designed from scratch. Unlike commercial solutions (Home Assistant, Google Home, etc.), MarvinLink gives you **complete control** over every layer - from the hardware sensors to the AI voice that responds to your commands.
@@ -51,7 +51,7 @@ The system runs on an **Orange Pi Zero 3** as the central hub, with **ESP32/ESP3
 
 ## ✨ Features
 
-### 🖥️ Web Dashboard
+### Web Dashboard
 - **Modern glassmorphism UI** with gradient backgrounds, smooth animations, and responsive layout
 - **Real-time sensor monitoring** - temperature, humidity, gas, light intensity, relay states - all live-updating
 - **Device control** - toggle relays and switches directly from the dashboard
@@ -60,7 +60,7 @@ The system runs on an **Orange Pi Zero 3** as the central hub, with **ESP32/ESP3
 - **Multi-language interface** - full UI translations for 🇺🇦 Ukrainian, 🇬🇧 English, and 🇩🇪 German!
 - **Dark theme** - beautiful glassmorphism design for 24/7 wall-mounted displays
 
-### 📊 Sensor History & Charts
+### Sensor History & Charts
 - **SQLite-backed history** - all sensor readings are automatically logged with timestamps
 - **Interactive Chart.js graphs** - view historical data for any sensor over 1, 7, or 30 days
 - **Multi-chart dashboard** - all sensor graphs displayed simultaneously in a scrollable grid layout
@@ -78,7 +78,7 @@ The system runs on an **Orange Pi Zero 3** as the central hub, with **ESP32/ESP3
 - **15+ selectable voices** - choose from Gemini's voice library (Aoede, Charon, Kore, Puck, Iapetus, etc.)
 - **Bluetooth speaker output** - audio responses are played through a paired Bluetooth speaker via BlueALSA
 
-### 🔌 ESP32 Sensor Nodes
+### ESP32 Sensor Nodes
 - **Plug-and-play auto-registration** - ESP32 nodes announce themselves to the server automatically on boot
 - **Network auto-discovery** - the server scans the local network and finds ESP32 devices via concurrent probing
 - **Supported sensors:**
@@ -104,7 +104,7 @@ The system runs on an **Orange Pi Zero 3** as the central hub, with **ESP32/ESP3
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 <p align="center">
   <img src="https://github.com/phant0m44/MarvinLink/blob/main/for_readme.md/settings_img.jpg?raw=true" alt="Settings" width="48%"/>
@@ -114,7 +114,7 @@ The system runs on an **Orange Pi Zero 3** as the central hub, with **ESP32/ESP3
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 <p align="center">
   <img src="https://github.com/phant0m44/MarvinLink/blob/main/for_readme.md/architecture.jpg?raw=true" alt="MarvinLink Architecture" width="700"/>
@@ -183,27 +183,26 @@ pip3 install flask flask-cors psutil
 # 3. Install voice assistant dependencies
 pip3 install google-genai pvporcupine sounddevice numpy scipy rich requests beautifulsoup4 duckduckgo-search
 
-# 4a. Run web server only
+# 4. Run web server only
 python3 app.py
-
-# 4b. Run everything (server + voice assistant)
+# Or run everything (server + voice assistant and other tools)
 python3 run.py
 ```
 
 The dashboard will be available at `http://<your-orange-pi-ip>` (port 80).
 
-> **💡 Tip:** Set the hostname to `marvinlink` and install Avahi for mDNS - then access via `http://marvinlink.local`
+> ** Tip:** Set the hostname to `marvinlink` and install Avahi for mDNS - then access via `http://marvinlink.local`
 
 ### Flashing ESP32 Nodes
 
-1. Open any firmware from `OPIZero3/sensorsCode/` in **Arduino IDE** or **PlatformIO**
+1. Open any firmware from `OPIZero3/sensorsCode/` in **Arduino IDE/CLI** or **PlatformIO**
 2. Edit the Wi-Fi credentials and Orange Pi server IP in the sketch
 3. Flash to your ESP32 board
 4. The node will automatically register itself with the server on boot
 
 ---
 
-## 📡 API Reference
+## API Reference
 
 All API endpoints are served from the Orange Pi on port 80.
 
@@ -233,7 +232,7 @@ All API endpoints are served from the Orange Pi on port 80.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |:------|:-----------|
