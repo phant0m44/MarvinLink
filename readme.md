@@ -68,7 +68,7 @@ The system runs on an **Orange Pi Zero 3** as the central hub, with **ESP32/ESP3
 - **Zoom & Pan** - scroll to zoom in on data (enabled in fullscreen mode), shift+drag to pan
 - **Retention management** - configure history retention (never / 1 / 7 / 30 days) or clear all data instantly
 
-### 🎤 AI Voice Assistant (Marvin)
+### AI Voice Assistant (Marvin)
 - **Wake word detection** - always-listening "Okay Marvin" wake word using Picovoice Porcupine (offline, on-device)
 - **Gemini Live real-time conversation** - full-duplex voice sessions powered by Google's Gemini 3.1 Flash Live model
 - **Device control via voice** - *"Turn on the light in the kitchen"* → instantly calls the relay API
@@ -90,7 +90,7 @@ The system runs on an **Orange Pi Zero 3** as the central hub, with **ESP32/ESP3
 - **Customizable sensor names, icons & units** - edit everything from the UI
 - **Multiple firmware examples** included (Arduino `.ino` files for various sensor combinations)
 
-### ⚙️ Backend & Infrastructure
+### Backend & Infrastructure
 - **Flask REST API** with 19+ endpoints for full system control
 - **SQLite database** for logs, sensor history, and event tracking
 - **JSON config files** for persistent settings and sensor registry
@@ -191,7 +191,7 @@ python3 run.py
 
 The dashboard will be available at `http://<your-orange-pi-ip>` (port 80).
 
-> ** Tip:** Set the hostname to `marvinlink` and install Avahi for mDNS - then access via `http://marvinlink.local`
+> **Tip:** Set the hostname to `marvinlink` and install Avahi for mDNS - then access via `http://marvinlink.local`
 
 ### Flashing ESP32 Nodes
 
